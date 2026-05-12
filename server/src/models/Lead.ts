@@ -30,7 +30,6 @@ const LeadSchema = new Schema<ILead>(
     },
     industry: {
       type: String,
-      enum: ['Restaurant', 'Food & Beverage', 'Retail', 'Healthcare', 'Technology', 'Education', 'Real Estate', 'Finance', 'Manufacturing', 'E-Commerce', 'Hospitality', 'Other'],
       default: 'Other',
     },
     hasWebsite: { type: Boolean, default: false },
