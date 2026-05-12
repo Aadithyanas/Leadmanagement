@@ -31,27 +31,40 @@ export function UploadJsonDialog() {
         
         for (const lead of leads) {
           try {
-            // Support both standard 'name' and Apify 'title'
-            const name = lead.name || lead.title;
+            // Super-robust field mapping
+            const name = lead.name || lead.title || lead.placeName || lead.bizName || lead.businessName || lead.phone || lead.email || 'Unnamed Lead';
+            const company = lead.company || lead.bizName || lead.businessName || name;
+            const phone = lead.phone || lead.phoneNumber || lead.tel || '';
+            const email = lead.email || lead.emailAddress || '';
+            const website = lead.websiteUrl || lead.url || lead.website || lead.site || '';
             
+            // Industry fallback
+            const industry = lead.industry || lead.categoryName || lead.category || lead.bizType || 'Other';
+
             if (name) {
-              // Build a requirements string from Apify data if available
+              // Build a requirements string from any available address fields
               let requirements = lead.requirements || '';
-              if (!requirements && lead.street) {
-                const address = [lead.street, lead.city, lead.state, lead.countryCode].filter(Boolean).join(', ');
-                requirements = `Location: ${address}`;
-                if (lead.totalScore) requirements += `\nRating: ${lead.totalScore} (${lead.reviewsCount} reviews)`;
+              if (!requirements) {
+                const addrParts = [
+                  lead.street, lead.address, lead.city, lead.state, lead.country, lead.countryCode, lead.zipCode, lead.postalCode
+                ].filter(Boolean);
+                if (addrParts.length > 0) {
+                  requirements = `Location: ${addrParts.join(', ')}`;
+                }
+                if (lead.totalScore || lead.rating) {
+                  requirements += `\nRating: ${lead.totalScore || lead.rating} (${lead.reviewsCount || lead.reviews || 0} reviews)`;
+                }
               }
 
               await createLead.mutateAsync({
                 name,
-                company: lead.company || name,
-                phone: lead.phone || '',
-                email: lead.email || '',
+                company,
+                phone,
+                email,
                 status: lead.status || 'New',
-                industry: lead.industry || lead.categoryName || 'Other',
-                hasWebsite: lead.hasWebsite || !!lead.url || !!lead.website,
-                websiteUrl: lead.websiteUrl || lead.url || lead.website || '',
+                industry,
+                hasWebsite: lead.hasWebsite || !!website,
+                websiteUrl: website,
                 requirements
               } as CreateLeadInput);
               successCount++;

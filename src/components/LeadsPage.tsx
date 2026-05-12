@@ -59,24 +59,38 @@ export function LeadsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="default" 
-            className="gap-2 shrink-0"
-            onClick={() => {
-              if (leadsToExport) {
-                exportLeadsToCSV(leadsToExport);
-                if (selectedLeadIds.length > 0) {
-                  toast({ title: 'Export Complete', description: `Exported ${selectedLeadIds.length} selected leads.` });
-                  clearSelection();
-                }
-              }
-            }}
-            disabled={!leadsToExport?.length}
-          >
-            <Download className="h-4 w-4" />
-            <span>{selectedLeadIds.length > 0 ? `Export (${selectedLeadIds.length})` : 'Export CSV'}</span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="default" 
+                className="gap-2 shrink-0"
+                disabled={!leads?.length}
+              >
+                <Download className="h-4 w-4" />
+                <span>Export Data</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={() => leads && exportLeadsToCSV(leads)}>
+                <CheckCircle2 className="mr-2 h-4 w-4 text-primary" />
+                <span>Export All ({leads?.length || 0})</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                disabled={selectedLeadIds.length === 0}
+                onClick={() => {
+                  if (leadsToExport) {
+                    exportLeadsToCSV(leadsToExport);
+                    toast({ title: 'Export Complete', description: `Exported ${selectedLeadIds.length} selected leads.` });
+                    clearSelection();
+                  }
+                }}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                <span>Export Selected ({selectedLeadIds.length})</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
