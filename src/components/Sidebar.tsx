@@ -3,6 +3,9 @@ import { useLeadStore } from '@/store/useLeadStore';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { checkHealth } from '@/services/api';
+import { Server, Database, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface SidebarProps {
   onLogout?: () => void;
@@ -76,7 +79,8 @@ export function Sidebar({ onLogout, isOpen, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        <div className="p-4 mt-auto border-t">
+        <div className="p-4 mt-auto border-t space-y-4">
+          <ServerStatus />
           {onLogout && (
             <Button variant="ghost" className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground" onClick={onLogout}>
               <LogOut className="h-4 w-4" />
@@ -86,5 +90,68 @@ export function Sidebar({ onLogout, isOpen, onClose }: SidebarProps) {
         </div>
       </aside>
     </>
+  );
+}
+
+function ServerStatus() {
+  const [status, setStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [dbStatus, setDbStatus] = useState<'connected' | 'disconnected'>('disconnected');
+
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const health = await checkHealth();
+        setStatus('online');
+        setDbStatus(health.db as any);
+      } catch {
+        setStatus('offline');
+      }
+    };
+    check();
+    const interval = setInterval(check, 30000); // Check every 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="px-2 py-3 rounded-lg bg-secondary/30 border border-border/50">
+      <div className="flex items-center justify-between mb-2 px-1">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">System Status</span>
+        <div className="flex items-center gap-1.5">
+          <div className={cn(
+            "h-1.5 w-1.5 rounded-full",
+            status === 'online' ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" : 
+            status === 'offline' ? "bg-rose-500" : "bg-amber-500"
+          )} />
+          <span className={cn(
+            "text-[10px] font-medium",
+            status === 'online' ? "text-emerald-500" : 
+            status === 'offline' ? "text-rose-500" : "text-amber-500"
+          )}>
+            {status === 'online' ? 'Live' : status === 'offline' ? 'Offline' : 'Checking...'}
+          </span>
+        </div>
+      </div>
+      
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2 px-1">
+          <Server className="h-3 w-3 text-muted-foreground" />
+          <span className="text-xs text-foreground/80">API Server</span>
+          {status === 'online' ? (
+            <CheckCircle2 className="h-3 w-3 text-emerald-500 ml-auto" />
+          ) : (
+            <AlertCircle className="h-3 w-3 text-muted-foreground ml-auto" />
+          )}
+        </div>
+        <div className="flex items-center gap-2 px-1">
+          <Database className="h-3 w-3 text-muted-foreground" />
+          <span className="text-xs text-foreground/80">Database</span>
+          {dbStatus === 'connected' ? (
+            <CheckCircle2 className="h-3 w-3 text-emerald-500 ml-auto" />
+          ) : (
+            <AlertCircle className="h-3 w-3 text-rose-500 ml-auto" />
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

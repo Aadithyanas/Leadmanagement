@@ -14,6 +14,12 @@ export interface GlobalSettings {
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+export async function checkHealth(): Promise<{ status: string; db: string }> {
+  const res = await fetch(`${API_BASE}/health`);
+  if (!res.ok) throw new Error('Unreachable');
+  return res.json();
+}
+
 // ---------- HTTP helpers ----------
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
