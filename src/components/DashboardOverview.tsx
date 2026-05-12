@@ -4,7 +4,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, BarChart, Bar, Legend 
 } from 'recharts';
-import { format, subDays } from 'date-fns';
+import { format, subDays, isSameDay } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Activity, TrendingUp, Target, Globe, Filter, Rocket, Plus, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -32,19 +32,27 @@ export function DashboardOverview() {
     }
   };
 
-  // Generate fake data for the last 7 days for the chart
+  // Generate real data for the last 7 days for the chart
   const generateChartData = () => {
     const data = [];
+    if (!leads) return [];
+
     for (let i = 6; i >= 0; i--) {
       const date = subDays(new Date(), i);
       const dayStr = format(date, 'MMM dd');
       
-      // In a real app, we'd filter the leads created on this day.
-      // Here we just use some randomized realistic numbers based on total leads.
+      // Filter leads created on this day
+      const acquired = leads.filter(l => isSameDay(new Date(l.createdAt), date)).length;
+      
+      // Filter leads updated on this day (as a proxy for engagement)
+      const engaged = leads.filter(l => 
+        isSameDay(new Date(l.updatedAt), date) && l.lastDiscussion
+      ).length;
+
       data.push({
         name: dayStr,
-        acquired: Math.floor(Math.random() * 15) + 2,
-        contacted: Math.floor(Math.random() * 10) + 1,
+        acquired,
+        contacted: engaged,
       });
     }
     return data;
@@ -71,6 +79,14 @@ export function DashboardOverview() {
   ] : [];
 
   const conversionRate = leads?.length ? Math.round((leads.filter(l => l.status === 'Won').length / leads.length) * 100) : 0;
+  
+  const avgEngagement = leads?.length 
+    ? (leads.filter(l => l.lastDiscussion).length / leads.length * 5).toFixed(1) 
+    : '0';
+    
+  const funnelEfficiency = leads?.length 
+    ? Math.round((leads.filter(l => !['New'].includes(l.status)).length / leads.length) * 100) 
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -152,7 +168,7 @@ export function DashboardOverview() {
             <CardDescription className="text-emerald-600 font-medium flex items-center gap-1">
               <Activity className="h-3 w-3" /> Avg Engagement
             </CardDescription>
-            <CardTitle className="text-3xl font-bold">4.2</CardTitle>
+            <CardTitle className="text-3xl font-bold">{avgEngagement}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-xs text-muted-foreground">Touchpoints per qualified lead</div>
@@ -164,7 +180,7 @@ export function DashboardOverview() {
             <CardDescription className="text-amber-600 font-medium flex items-center gap-1">
               <Filter className="h-3 w-3" /> Funnel Efficiency
             </CardDescription>
-            <CardTitle className="text-3xl font-bold">88%</CardTitle>
+            <CardTitle className="text-3xl font-bold">{funnelEfficiency}%</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-xs text-muted-foreground">Based on lead status velocity</div>
