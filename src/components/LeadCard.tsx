@@ -5,6 +5,11 @@ import { useLeadStore } from '@/store/useLeadStore';
 import { timeAgo, formatDate, isFollowUpToday, isOverdue } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
 import type { Lead } from '@/types';
+import { useDeleteLead } from '@/hooks/useLeads';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/useToast';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface LeadCardProps {
   lead: Lead;
@@ -12,7 +17,7 @@ interface LeadCardProps {
 }
 
 export function LeadCard({ lead, index }: LeadCardProps) {
-  const { openTimeline } = useLeadStore();
+  const { openTimeline, selectedLeadIds, toggleLeadSelection } = useLeadStore();
   const overdue = isOverdue(lead.followUpAt);
   const todayFU = isFollowUpToday(lead.followUpAt);
 
@@ -25,9 +30,24 @@ export function LeadCard({ lead, index }: LeadCardProps) {
       className={cn(
         'group relative cursor-pointer rounded-xl border bg-card p-4 shadow-sm transition-all duration-200 hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5',
         overdue && 'border-destructive/40 pulse-overdue',
-        todayFU && !overdue && 'border-amber-400/50 bg-amber-50/30 dark:bg-amber-950/10'
+        todayFU && !overdue && 'border-amber-400/50 bg-amber-50/30 dark:bg-amber-950/10',
+        selectedLeadIds.includes(lead.id) && 'ring-2 ring-primary border-primary/50 bg-primary/5'
       )}
     >
+      {/* Selection checkbox */}
+      <div 
+        className={cn(
+          "absolute top-3 left-3 z-10 transition-opacity",
+          selectedLeadIds.includes(lead.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <Checkbox 
+          checked={selectedLeadIds.includes(lead.id)}
+          onCheckedChange={() => toggleLeadSelection(lead.id)}
+        />
+      </div>
+
       {/* Overdue indicator */}
       {overdue && (
         <div className="absolute top-2 right-2 flex items-center gap-1 text-xs font-medium text-destructive">

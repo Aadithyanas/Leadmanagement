@@ -2,12 +2,14 @@ import { useLeads } from '@/hooks/useLeads';
 import { useLeadStore } from '@/store/useLeadStore';
 import { LeadCard } from '@/components/LeadCard';
 import { isFollowUpToday, isOverdue } from '@/lib/date-utils';
-import { Inbox, Loader2 } from 'lucide-react';
+import { Inbox, Loader2, CheckSquare, Square } from 'lucide-react';
 import type { Lead } from '@/types';
+import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 
 export function LeadList() {
   const { data: leads, isLoading } = useLeads();
-  const { searchQuery, statusFilter, viewMode, openTimeline } = useLeadStore();
+  const { searchQuery, statusFilter, viewMode, openTimeline, selectedLeadIds, toggleLeadSelection, setSelectedLeadIds } = useLeadStore();
 
   if (isLoading) {
     return (
@@ -81,19 +83,41 @@ export function LeadList() {
                 <table className="w-full text-sm text-left">
                   <thead className="bg-muted/50 text-muted-foreground">
                     <tr>
-                      <th className="px-4 py-3 font-medium">Name / Company</th>
-                      <th className="px-4 py-3 font-medium">Industry</th>
-                      <th className="px-4 py-3 font-medium">Contact</th>
-                      <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-4 py-3 w-10">
+                        <Checkbox 
+                          checked={section.leads.length > 0 && section.leads.every(l => selectedLeadIds.includes(l.id))}
+                          onCheckedChange={(checked: boolean) => {
+                            const ids = section.leads.map(l => l.id);
+                            if (checked) {
+                              setSelectedLeadIds([...new Set([...selectedLeadIds, ...ids])]);
+                            } else {
+                              setSelectedLeadIds(selectedLeadIds.filter(id => !ids.includes(id)));
+                            }
+                          }}
+                        />
+                      </th>
+                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Name / Company</th>
+                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Industry</th>
+                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Contact</th>
+                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {section.leads.map((lead) => (
                       <tr 
                         key={lead.id} 
-                        className="hover:bg-accent/50 cursor-pointer transition-colors"
+                        className={cn(
+                          "hover:bg-accent/50 cursor-pointer transition-colors border-l-2",
+                          selectedLeadIds.includes(lead.id) ? "bg-primary/5 border-l-primary" : "border-l-transparent"
+                        )}
                         onClick={() => openTimeline(lead.id)}
                       >
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox 
+                            checked={selectedLeadIds.includes(lead.id)}
+                            onCheckedChange={() => toggleLeadSelection(lead.id)}
+                          />
+                        </td>
                         <td className="px-4 py-3">
                           <div className="font-medium">{lead.name}</div>
                           {lead.company && <div className="text-xs text-muted-foreground">{lead.company}</div>}

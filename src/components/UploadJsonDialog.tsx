@@ -27,39 +27,55 @@ export function UploadJsonDialog() {
         const leads = Array.isArray(data) ? data : [data];
         
         let successCount = 0;
+        let failCount = 0;
+        
         for (const lead of leads) {
-          // Support both standard 'name' and Apify 'title'
-          const name = lead.name || lead.title;
-          
-          if (name) {
-            // Build a requirements string from Apify data if available
-            let requirements = lead.requirements || '';
-            if (!requirements && lead.street) {
-              const address = [lead.street, lead.city, lead.state, lead.countryCode].filter(Boolean).join(', ');
-              requirements = `Location: ${address}`;
-              if (lead.totalScore) requirements += `\nRating: ${lead.totalScore} (${lead.reviewsCount} reviews)`;
-            }
+          try {
+            // Support both standard 'name' and Apify 'title'
+            const name = lead.name || lead.title;
+            
+            if (name) {
+              // Build a requirements string from Apify data if available
+              let requirements = lead.requirements || '';
+              if (!requirements && lead.street) {
+                const address = [lead.street, lead.city, lead.state, lead.countryCode].filter(Boolean).join(', ');
+                requirements = `Location: ${address}`;
+                if (lead.totalScore) requirements += `\nRating: ${lead.totalScore} (${lead.reviewsCount} reviews)`;
+              }
 
-            await createLead.mutateAsync({
-              name,
-              company: lead.company || name, // Fallback to name if company is missing
-              phone: lead.phone || '',
-              email: lead.email || '',
-              status: lead.status || 'New',
-              industry: lead.industry || lead.categoryName || 'Other',
-              hasWebsite: lead.hasWebsite || !!lead.url || !!lead.website,
-              websiteUrl: lead.websiteUrl || lead.url || lead.website || '',
-              requirements
-            } as CreateLeadInput);
-            successCount++;
+              await createLead.mutateAsync({
+                name,
+                company: lead.company || name,
+                phone: lead.phone || '',
+                email: lead.email || '',
+                status: lead.status || 'New',
+                industry: lead.industry || lead.categoryName || 'Other',
+                hasWebsite: lead.hasWebsite || !!lead.url || !!lead.website,
+                websiteUrl: lead.websiteUrl || lead.url || lead.website || '',
+                requirements
+              } as CreateLeadInput);
+              successCount++;
+            }
+          } catch (err) {
+            console.error('Failed to import lead:', lead, err);
+            failCount++;
           }
         }
         
-        toast({ title: 'JSON Uploaded', description: `Successfully imported ${successCount} leads.`, variant: 'success' });
+        if (successCount > 0) {
+          toast({ 
+            title: 'Import Complete', 
+            description: `Successfully imported ${successCount} leads.${failCount > 0 ? ` (${failCount} failed)` : ''}`, 
+            variant: 'success' 
+          });
+        } else if (failCount > 0) {
+          toast({ title: 'Import Failed', description: 'Failed to import leads. Check console for details.', variant: 'destructive' });
+        }
+        
         setFile(null);
         setUploadJsonOpen(false);
       } catch (err) {
-        toast({ title: 'Invalid JSON', description: 'Failed to parse the uploaded file.', variant: 'destructive' });
+        toast({ title: 'Invalid JSON', description: 'Failed to parse the JSON file format.', variant: 'destructive' });
       } finally {
         setIsProcessing(false);
       }

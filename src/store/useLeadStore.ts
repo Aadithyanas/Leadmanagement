@@ -18,6 +18,7 @@ interface LeadStoreState {
   isDiscoverOpen: boolean;
   notificationEmail: string;
   enableNotifications: boolean;
+  selectedLeadIds: string[];
 
   setSearchQuery: (q: string) => void;
   setStatusFilter: (s: LeadStatus | 'All') => void;
@@ -34,6 +35,9 @@ interface LeadStoreState {
   toggleDiscover: () => void;
   setNotificationEmail: (email: string) => void;
   setEnableNotifications: (enable: boolean) => void;
+  toggleLeadSelection: (id: string) => void;
+  setSelectedLeadIds: (ids: string[]) => void;
+  clearSelection: () => void;
 }
 
 export const useLeadStore = create<LeadStoreState>((set) => ({
@@ -51,6 +55,7 @@ export const useLeadStore = create<LeadStoreState>((set) => ({
   isDiscoverOpen: false,
   notificationEmail: localStorage.getItem('leadflow_notification_email') || '',
   enableNotifications: localStorage.getItem('leadflow_enable_notifications') === 'true',
+  selectedLeadIds: [],
 
   setSearchQuery: (q) => set({ searchQuery: q }),
   setStatusFilter: (s) => set({ statusFilter: s }),
@@ -80,4 +85,11 @@ export const useLeadStore = create<LeadStoreState>((set) => ({
     localStorage.setItem('leadflow_enable_notifications', String(enable));
     set({ enableNotifications: enable });
   },
+  toggleLeadSelection: (id) => set((s) => ({
+    selectedLeadIds: s.selectedLeadIds.includes(id)
+      ? s.selectedLeadIds.filter(i => i !== id)
+      : [...s.selectedLeadIds, id]
+  })),
+  setSelectedLeadIds: (ids) => set({ selectedLeadIds: ids }),
+  clearSelection: () => set({ selectedLeadIds: [] }),
 }));

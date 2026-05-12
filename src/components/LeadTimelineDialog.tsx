@@ -10,11 +10,11 @@ import {
 } from '@/components/ui/select';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useLeadStore } from '@/store/useLeadStore';
-import { useLeads, useUpdateLeadStatus, useDiscussions, useCreateDiscussion } from '@/hooks/useLeads';
+import { useLeads, useUpdateLeadStatus, useDiscussions, useCreateDiscussion, useDeleteLead } from '@/hooks/useLeads';
 import { toast } from '@/hooks/useToast';
 import { formatDateTime } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
-import { Loader2, Send, Calendar, MessageCircle, Phone, Mail, Building2, Globe, Ban, FileText } from 'lucide-react';
+import { Loader2, Send, Calendar, MessageCircle, Phone, Mail, Building2, Globe, Ban, FileText, Trash2, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { LeadStatus, Lead } from '@/types';
 
@@ -26,6 +26,8 @@ export function LeadTimelineDialog() {
   const updateStatus = useUpdateLeadStatus();
   const { data: discussions, isLoading: loadingDisc } = useDiscussions(selectedLeadId);
   const createDiscussion = useCreateDiscussion();
+  const deleteLead = useDeleteLead();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [note, setNote] = useState('');
   const [followUp, setFollowUp] = useState('');
@@ -63,6 +65,24 @@ export function LeadTimelineDialog() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!selectedLeadId || !lead) return;
+    if (!confirm(`Are you sure you want to delete ${lead.name}?`)) return;
+    
+    try {
+      setIsDeleting(true);
+      await deleteLead.mutateAsync(selectedLeadId);
+      toast({ title: 'Lead deleted', description: `${lead.name} has been removed.`, variant: 'success' });
+      closeTimeline();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to delete lead.', variant: 'destructive' });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const isMapsLink = lead?.websiteUrl?.includes('google.com/maps') || lead?.websiteUrl?.includes('goo.gl/maps');
+
   return (
     <Dialog open={isTimelineOpen} onOpenChange={(o) => !o && closeTimeline()}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
@@ -82,6 +102,15 @@ export function LeadTimelineDialog() {
                     </span>
                   </DialogDescription>
                 </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                </Button>
               </div>
             </DialogHeader>
 
@@ -98,8 +127,8 @@ export function LeadTimelineDialog() {
                   ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300'
                   : 'bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300'
               )}>
-                {lead.hasWebsite ? <Globe className="h-3 w-3" /> : <Ban className="h-3 w-3" />}
-                {lead.hasWebsite ? 'Has website' : 'No website'}
+                {isMapsLink ? <MapPin className="h-3 w-3" /> : (lead.hasWebsite ? <Globe className="h-3 w-3" /> : <Ban className="h-3 w-3" />)}
+                {isMapsLink ? 'View on Maps' : (lead.hasWebsite ? 'Has website' : 'No website')}
               </span>
               {lead.hasWebsite && lead.websiteUrl && (
                 <a href={lead.websiteUrl} target="_blank" rel="noopener noreferrer"

@@ -8,8 +8,11 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, Plus, FileJson, FileSpreadsheet, Keyboard, Unplug, LayoutGrid, List } from 'lucide-react';
+import { Search, Plus, FileJson, FileSpreadsheet, Keyboard, Unplug, LayoutGrid, List, Download } from 'lucide-react';
 import type { LeadStatus } from '@/types';
+import { exportLeadsToCSV } from '@/lib/export-utils';
+import { useLeads } from '@/hooks/useLeads';
+import { toast } from '@/hooks/useToast';
 
 const ALL_STATUSES: (LeadStatus | 'All')[] = [
   'All', 'New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost',
@@ -21,8 +24,13 @@ export function LeadsPage() {
     statusFilter, setStatusFilter,
     viewMode, setViewMode,
     openAddLead, setUploadJsonOpen, setUploadSheetOpen, setConnectApifyOpen,
-    apifyApiKey, setActiveTab
+    apifyApiKey, setActiveTab, selectedLeadIds, clearSelection
   } = useLeadStore();
+  const { data: leads } = useLeads();
+
+  const leadsToExport = selectedLeadIds.length > 0 
+    ? leads?.filter(l => selectedLeadIds.includes(l.id)) 
+    : leads;
 
   return (
     <div className="space-y-6">
@@ -32,39 +40,60 @@ export function LeadsPage() {
           <p className="text-muted-foreground">Manage, track, and convert your business prospects.</p>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="default" className="gap-2 shrink-0">
-              <Plus className="h-4 w-4" />
-              <span>Add Lead</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => setUploadJsonOpen(true)}>
-              <FileJson className="mr-2 h-4 w-4" />
-              <span>Upload JSON</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setUploadSheetOpen(true)}>
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              <span>Upload Sheet</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={openAddLead}>
-              <Keyboard className="mr-2 h-4 w-4" />
-              <span>Manual Entry</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => {
-              if (apifyApiKey) {
-                setActiveTab('discover');
-              } else {
-                setConnectApifyOpen(true);
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="default" 
+            className="gap-2 shrink-0"
+            onClick={() => {
+              if (leadsToExport) {
+                exportLeadsToCSV(leadsToExport);
+                if (selectedLeadIds.length > 0) {
+                  toast({ title: 'Export Complete', description: `Exported ${selectedLeadIds.length} selected leads.` });
+                  clearSelection();
+                }
               }
-            }}>
-              <Unplug className="mr-2 h-4 w-4" />
-              <span>Connect Apify</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            }}
+            disabled={!leadsToExport?.length}
+          >
+            <Download className="h-4 w-4" />
+            <span>{selectedLeadIds.length > 0 ? `Export (${selectedLeadIds.length})` : 'Export CSV'}</span>
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="default" className="gap-2 shrink-0">
+                <Plus className="h-4 w-4" />
+                <span>Add Lead</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => setUploadJsonOpen(true)}>
+                <FileJson className="mr-2 h-4 w-4" />
+                <span>Upload JSON</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setUploadSheetOpen(true)}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                <span>Upload Sheet</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={openAddLead}>
+                <Keyboard className="mr-2 h-4 w-4" />
+                <span>Manual Entry</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => {
+                if (apifyApiKey) {
+                  setActiveTab('discover');
+                } else {
+                  setConnectApifyOpen(true);
+                }
+              }}>
+                <Unplug className="mr-2 h-4 w-4" />
+                <span>Connect Apify</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 items-center bg-card p-2 rounded-lg border">
