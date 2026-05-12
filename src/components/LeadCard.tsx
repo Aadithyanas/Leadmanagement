@@ -1,0 +1,106 @@
+import { motion } from 'framer-motion';
+import { Building2, Clock, MessageSquare, Calendar, Globe, Ban } from 'lucide-react';
+import { StatusBadge } from '@/components/StatusBadge';
+import { useLeadStore } from '@/store/useLeadStore';
+import { timeAgo, formatDate, isFollowUpToday, isOverdue } from '@/lib/date-utils';
+import { cn } from '@/lib/utils';
+import type { Lead } from '@/types';
+
+interface LeadCardProps {
+  lead: Lead;
+  index: number;
+}
+
+export function LeadCard({ lead, index }: LeadCardProps) {
+  const { openTimeline } = useLeadStore();
+  const overdue = isOverdue(lead.followUpAt);
+  const todayFU = isFollowUpToday(lead.followUpAt);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.03, duration: 0.25 }}
+      onClick={() => openTimeline(lead.id)}
+      className={cn(
+        'group relative cursor-pointer rounded-xl border bg-card p-4 shadow-sm transition-all duration-200 hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5',
+        overdue && 'border-destructive/40 pulse-overdue',
+        todayFU && !overdue && 'border-amber-400/50 bg-amber-50/30 dark:bg-amber-950/10'
+      )}
+    >
+      {/* Overdue indicator */}
+      {overdue && (
+        <div className="absolute top-2 right-2 flex items-center gap-1 text-xs font-medium text-destructive">
+          <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
+          Overdue
+        </div>
+      )}
+      {todayFU && !overdue && (
+        <div className="absolute top-2 right-2 flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+          Today
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="min-w-0">
+          <h3 className="font-semibold text-sm truncate group-hover:text-primary transition-colors">
+            {lead.name}
+          </h3>
+          {lead.company && (
+            <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
+              <Building2 className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate">{lead.company}</span>
+            </div>
+          )}
+        </div>
+        <StatusBadge status={lead.status} />
+      </div>
+
+      {/* Industry & Website */}
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
+        {lead.industry && lead.industry !== 'Other' && (
+          <span className="inline-flex items-center rounded-md bg-violet-50 dark:bg-violet-950/30 px-2 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
+            {lead.industry}
+          </span>
+        )}
+        <span className={cn(
+          'inline-flex items-center gap-1 text-xs',
+          lead.hasWebsite ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
+        )}>
+          {lead.hasWebsite ? <Globe className="h-3 w-3" /> : <Ban className="h-3 w-3" />}
+          {lead.hasWebsite ? 'Has website' : 'No website'}
+        </span>
+      </div>
+
+      {/* Last Discussion */}
+      {lead.lastDiscussion && (
+        <div className="flex items-start gap-1.5 mb-2">
+          <MessageSquare className="h-3 w-3 text-muted-foreground mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+            {lead.lastDiscussion}
+          </p>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="flex items-center justify-between text-xs text-muted-foreground mt-2 pt-2 border-t">
+        <div className="flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          <span>{lead.lastDiscussion ? timeAgo(lead.updatedAt) : 'No discussions'}</span>
+        </div>
+        {lead.followUpAt && (
+          <div className={cn(
+            'flex items-center gap-1',
+            overdue && 'text-destructive font-medium',
+            todayFU && !overdue && 'text-amber-600 dark:text-amber-400 font-medium'
+          )}>
+            <Calendar className="h-3 w-3" />
+            <span>{formatDate(lead.followUpAt)}</span>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
