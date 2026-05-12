@@ -11,23 +11,28 @@ export function exportLeadsToCSV(leads: Lead[]) {
     'Status',
     'Industry',
     'Website',
+    'Map Link',
     'Last Discussion',
     'Follow Up At',
     'Created At'
   ];
 
-  const rows = leads.map(l => [
-    `"${l.name.replace(/"/g, '""')}"`,
-    `"${l.company.replace(/"/g, '""')}"`,
-    `"${l.email}"`,
-    `"${l.phone}"`,
-    `"${l.status}"`,
-    `"${l.industry}"`,
-    `"${l.websiteUrl}"`,
-    `"${l.lastDiscussion.replace(/"/g, '""')}"`,
-    l.followUpAt ? new Date(l.followUpAt).toLocaleDateString() : 'N/A',
-    new Date(l.createdAt).toLocaleDateString()
-  ]);
+  const rows = leads.map(l => {
+    const isMap = l.websiteUrl?.includes('google.com/maps') || l.websiteUrl?.includes('goo.gl/maps');
+    return [
+      `"${l.name.replace(/"/g, '""')}"`,
+      `"${l.company.replace(/"/g, '""')}"`,
+      `"${l.email}"`,
+      `"${l.phone}"`,
+      `"${l.status}"`,
+      `"${l.industry}"`,
+      `"${!isMap ? (l.websiteUrl || '') : ''}"`,
+      `"${isMap ? l.websiteUrl : ''}"`,
+      `"${l.lastDiscussion.replace(/"/g, '""')}"`,
+      l.followUpAt ? new Date(l.followUpAt).toLocaleDateString() : 'N/A',
+      new Date(l.createdAt).toLocaleDateString()
+    ];
+  });
 
   const csvContent = [
     headers.join(','),
