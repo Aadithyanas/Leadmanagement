@@ -101,24 +101,45 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Failed to delete lead' });
   }
 });
-// ── POST /api/leads/test-notification ── Manual test trigger ──
-router.post('/test-notification', async (req: Request, res: Response) => {
+// ── POST /api/leads/seed-my-data ── Populate personal demo data ──
+router.post('/seed-my-data', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email is required' });
+    const ownerEmail = req.userEmail;
+    
+    // Check if user already has data to avoid double seeding
+    const existingCount = await Lead.countDocuments({ ownerEmail });
+    if (existingCount > 0) {
+      return res.status(400).json({ error: 'Dashboard already has data. Cannot seed again.' });
+    }
 
-    const dummyLeads = [
-      { name: 'Test Lead', company: 'LeadFlow Demo', status: 'Qualified', followUpAt: new Date() }
+    const now = new Date();
+    const d = (daysAgo: number) => new Date(now.getTime() - daysAgo * 86400000);
+    const today = () => { const t = new Date(); t.setHours(14, 0, 0, 0); return t; };
+    const yesterday = () => { const t = new Date(); t.setDate(t.getDate() - 1); t.setHours(10, 0, 0, 0); return t; };
+
+    const demoLeadsData = [
+      { name: 'Sarah Chen', company: 'TechVision Inc.', phone: '+1-555-0101', email: 'sarah.chen@techvision.com', status: 'Qualified', industry: 'Technology', hasWebsite: true, websiteUrl: 'https://techvision.com', requirements: 'Need enterprise CRM integration.', lastDiscussion: 'Very interested in enterprise plan.', followUpAt: today(), ownerEmail, createdAt: d(15), updatedAt: d(1) },
+      { name: 'Marcus Johnson', company: 'DataFlow Systems', phone: '+1-555-0102', email: 'marcus@dataflow.io', status: 'Proposal Sent', industry: 'Technology', hasWebsite: true, websiteUrl: 'https://dataflow.io', requirements: 'Looking for 50-seat license.', lastDiscussion: 'Sent proposal. Awaiting approval.', followUpAt: today(), ownerEmail, createdAt: d(22), updatedAt: d(2) },
+      { name: 'Emily Rodriguez', company: 'GreenScale Analytics', phone: '+1-555-0103', email: 'emily.r@greenscale.com', status: 'Contacted', industry: 'Finance', hasWebsite: true, websiteUrl: 'https://greenscale.com', requirements: 'Want data analytics dashboard.', lastDiscussion: 'Had introductory call.', followUpAt: yesterday(), ownerEmail, createdAt: d(10), updatedAt: d(3) },
+      { name: 'Priya Sharma', company: 'CloudNine Platform', phone: '+1-555-0105', email: 'priya@cloudnine.dev', status: 'Won', industry: 'Technology', hasWebsite: true, websiteUrl: 'https://cloudnine.dev', requirements: 'Cloud hosting migration.', lastDiscussion: 'Contract signed!', followUpAt: null, ownerEmail, createdAt: d(45), updatedAt: d(5) },
+      { name: 'Daniel Thompson', company: 'Apex Industries', phone: '+1-555-0108', email: 'dthompson@apex-ind.com', status: 'Qualified', industry: 'Manufacturing', hasWebsite: true, websiteUrl: 'https://apex-ind.com', requirements: 'Custom ERP integration.', lastDiscussion: 'Needs custom integration.', followUpAt: yesterday(), ownerEmail, createdAt: d(18), updatedAt: d(2) }
     ];
 
-    const success = await sendExpiryNotification(email, dummyLeads);
-    if (success) {
-      res.json({ message: 'Test email sent successfully!' });
-    } else {
-      res.status(500).json({ error: 'Failed to send test email. Check server logs.' });
-    }
+    const leads = await Lead.insertMany(demoLeadsData);
+    
+    // Add some discussions for the first few leads
+    const discsData = [
+      { leadId: leads[0]!._id, note: 'Initial outreach via LinkedIn. Sarah responded positively.', ownerEmail, createdAt: d(14) },
+      { leadId: leads[0]!._id, note: 'Discovery call completed. 200+ employees.', ownerEmail, createdAt: d(10) },
+      { leadId: leads[1]!._id, note: 'Sent proposal for 50-seat license.', ownerEmail, createdAt: d(2) },
+      { leadId: leads[3]!._id, note: 'Contract signed! Onboarding starts Monday.', ownerEmail, createdAt: d(5) }
+    ];
+
+    await Discussion.insertMany(discsData);
+
+    res.json({ message: 'Personal dashboard seeded successfully!', count: leads.length });
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Failed to seed personal data' });
   }
 });
 

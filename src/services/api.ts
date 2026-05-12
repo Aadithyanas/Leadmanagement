@@ -294,3 +294,7 @@ export function seedDemoData(): void {
 
   saveLocalLeads(demoLeads);
 }
+
+export async function seedMyData(): Promise<{ message: string; count: number }> {
+  return await request('/leads/seed-my-data', { method: 'POST' });
+}

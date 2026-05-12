@@ -6,12 +6,31 @@ import {
 } from 'recharts';
 import { format, subDays } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Activity, TrendingUp, Target, Globe, Filter } from 'lucide-react';
+import { Activity, TrendingUp, Target, Globe, Filter, Rocket, Plus, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { seedMyData } from '@/services/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { toast } from '@/hooks/useToast';
 
 export function DashboardOverview() {
-  const { data: leads } = useLeads();
+  const { data: leads, isLoading } = useLeads();
+  const queryClient = useQueryClient();
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  const handleSeed = async () => {
+    try {
+      setIsSeeding(true);
+      await seedMyData();
+      await queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast({ title: 'Dashboard Seeded!', description: 'Your personal dashboard has been populated with demo data.' });
+    } catch (err: any) {
+      toast({ title: 'Seeding Failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsSeeding(false);
+    }
+  };
 
   // Generate fake data for the last 7 days for the chart
   const generateChartData = () => {
@@ -55,10 +74,48 @@ export function DashboardOverview() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back. Here's an overview of your lead generation pipeline.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Dashboard</h1>
+          <p className="text-muted-foreground">Welcome back. Here's an overview of your lead generation pipeline.</p>
+        </div>
+        {leads && leads.length === 0 && !isLoading && (
+          <Button 
+            onClick={handleSeed} 
+            disabled={isSeeding}
+            className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20"
+            variant="outline"
+          >
+            {isSeeding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Rocket className="mr-2 h-4 w-4" />}
+            Seed Demo Data
+          </Button>
+        )}
       </div>
+
+      {leads && leads.length === 0 && !isLoading && (
+        <Card className="bg-gradient-to-br from-primary/5 via-background to-background border-dashed border-2">
+          <CardContent className="pt-10 pb-10 flex flex-col items-center text-center">
+            <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
+              <Rocket className="h-8 w-8 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Get Started with LeadFlow</h2>
+            <p className="text-muted-foreground max-w-md mb-8">
+              Welcome! Your dashboard is currently empty. Start by discovering new leads or 
+              use our demo seeder to explore the analytics features.
+            </p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Button onClick={handleSeed} disabled={isSeeding} size="lg">
+                {isSeeding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Populate with Demo Data
+              </Button>
+              <Button variant="outline" size="lg" onClick={() => {}}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Your First Lead
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <DashboardStats />
 

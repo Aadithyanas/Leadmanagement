@@ -16,9 +16,9 @@ const ALL_STATUSES: (LeadStatus | 'All')[] = [
 ];
 
 export function LeadsPage() {
-  const { 
-    searchQuery, setSearchQuery, 
-    statusFilter, setStatusFilter, 
+  const {
+    searchQuery, setSearchQuery,
+    statusFilter, setStatusFilter,
     viewMode, setViewMode,
     openAddLead, setUploadJsonOpen, setUploadSheetOpen, setConnectApifyOpen,
     apifyApiKey, setActiveTab
