@@ -2,7 +2,7 @@ import { useLeads } from '@/hooks/useLeads';
 import { useLeadStore } from '@/store/useLeadStore';
 import { LeadCard } from '@/components/LeadCard';
 import { isFollowUpToday, isOverdue } from '@/lib/date-utils';
-import { Inbox, Loader2, CheckSquare, Square } from 'lucide-react';
+import { Inbox, Loader2, CheckSquare, Square, MapPin, Globe, Ban } from 'lucide-react';
 import type { Lead } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -121,6 +121,23 @@ export function LeadList() {
                         <td className="px-4 py-3">
                           <div className="font-medium">{lead.name}</div>
                           {lead.company && <div className="text-xs text-muted-foreground">{lead.company}</div>}
+                          {lead.websiteUrl && (
+                            <div className={cn(
+                              "flex items-center gap-1 mt-1 text-[10px]",
+                              (lead.websiteUrl.includes('google.com/maps') || lead.websiteUrl.includes('goo.gl/maps')) 
+                                ? "text-primary" 
+                                : "text-emerald-600"
+                            )}>
+                              {(lead.websiteUrl.includes('google.com/maps') || lead.websiteUrl.includes('goo.gl/maps')) 
+                                ? <MapPin className="h-2.5 w-2.5" /> 
+                                : <Globe className="h-2.5 w-2.5" />}
+                              <span className="truncate max-w-[150px]">
+                                {(lead.websiteUrl.includes('google.com/maps') || lead.websiteUrl.includes('goo.gl/maps')) 
+                                  ? 'View on Maps' 
+                                  : 'Website'}
+                              </span>
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                            {lead.industry && (

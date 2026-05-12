@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Building2, Clock, MessageSquare, Calendar, Globe, Ban } from 'lucide-react';
+import { Building2, Clock, MessageSquare, Calendar, Globe, Ban, MapPin } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useLeadStore } from '@/store/useLeadStore';
 import { timeAgo, formatDate, isFollowUpToday, isOverdue } from '@/lib/date-utils';
@@ -20,6 +20,7 @@ export function LeadCard({ lead, index }: LeadCardProps) {
   const { openTimeline, selectedLeadIds, toggleLeadSelection } = useLeadStore();
   const overdue = isOverdue(lead.followUpAt);
   const todayFU = isFollowUpToday(lead.followUpAt);
+  const isMapsLink = lead.websiteUrl?.includes('google.com/maps') || lead.websiteUrl?.includes('goo.gl/maps');
 
   return (
     <motion.div
@@ -89,8 +90,8 @@ export function LeadCard({ lead, index }: LeadCardProps) {
           'inline-flex items-center gap-1 text-xs',
           lead.hasWebsite ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
         )}>
-          {lead.hasWebsite ? <Globe className="h-3 w-3" /> : <Ban className="h-3 w-3" />}
-          {lead.hasWebsite ? 'Has website' : 'No website'}
+          {isMapsLink ? <MapPin className="h-3 w-3" /> : (lead.hasWebsite ? <Globe className="h-3 w-3" /> : <Ban className="h-3 w-3" />)}
+          {isMapsLink ? 'View on Maps' : (lead.hasWebsite ? 'Has website' : 'No website')}
         </span>
       </div>
 

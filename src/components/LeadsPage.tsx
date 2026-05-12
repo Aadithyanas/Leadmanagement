@@ -8,11 +8,13 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, Plus, FileJson, FileSpreadsheet, Keyboard, Unplug, LayoutGrid, List, Download } from 'lucide-react';
+import { Search, Plus, FileJson, FileSpreadsheet, Keyboard, Unplug, LayoutGrid, List, Download, Trash2, X, CheckCircle2 } from 'lucide-react';
 import type { LeadStatus } from '@/types';
 import { exportLeadsToCSV } from '@/lib/export-utils';
-import { useLeads } from '@/hooks/useLeads';
+import { useLeads, useDeleteLead } from '@/hooks/useLeads';
 import { toast } from '@/hooks/useToast';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 const ALL_STATUSES: (LeadStatus | 'All')[] = [
   'All', 'New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost',
@@ -27,10 +29,26 @@ export function LeadsPage() {
     apifyApiKey, setActiveTab, selectedLeadIds, clearSelection
   } = useLeadStore();
   const { data: leads } = useLeads();
+  const deleteLead = useDeleteLead();
 
   const leadsToExport = selectedLeadIds.length > 0 
     ? leads?.filter(l => selectedLeadIds.includes(l.id)) 
     : leads;
+
+  const handleBulkDelete = async () => {
+    if (!selectedLeadIds.length) return;
+    if (!confirm(`Are you sure you want to delete ${selectedLeadIds.length} selected leads?`)) return;
+    
+    try {
+      // We'll delete one by one for now since the API handles IDs.
+      // In a real app, we might have a /bulk-delete endpoint.
+      await Promise.all(selectedLeadIds.map(id => deleteLead.mutateAsync(id)));
+      toast({ title: 'Success', description: `Deleted ${selectedLeadIds.length} leads.`, variant: 'success' });
+      clearSelection();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to delete leads.', variant: 'destructive' });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -152,6 +170,62 @@ export function LeadsPage() {
       </div>
 
       <LeadList />
+
+      {/* Floating Bulk Actions Bar */}
+      <AnimatePresence>
+        {selectedLeadIds.length > 0 && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-6 px-6 py-4 bg-gray-900 dark:bg-gray-800 text-white rounded-full shadow-2xl border border-white/10"
+          >
+            <div className="flex items-center gap-3 pr-6 border-r border-white/20">
+              <CheckCircle2 className="h-5 w-5 text-primary" />
+              <span className="font-semibold whitespace-nowrap">
+                {selectedLeadIds.length} leads selected
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="text-white hover:bg-white/10 gap-2 h-9"
+                onClick={() => {
+                  if (leadsToExport) {
+                    exportLeadsToCSV(leadsToExport);
+                    toast({ title: 'Export Complete', description: `Exported ${selectedLeadIds.length} selected leads.` });
+                    clearSelection();
+                  }
+                }}
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="text-red-400 hover:text-red-300 hover:bg-red-500/10 gap-2 h-9"
+                onClick={handleBulkDelete}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </Button>
+
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                className="h-8 w-8 text-white/50 hover:text-white"
+                onClick={clearSelection}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
