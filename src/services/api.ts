@@ -17,8 +17,12 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 // ---------- HTTP helpers ----------
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  const userEmail = localStorage.getItem('leadflow_session') || '';
   const res = await fetch(`${API_BASE}${url}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'x-user-email': userEmail
+    },
     ...options,
   });
   if (!res.ok) {

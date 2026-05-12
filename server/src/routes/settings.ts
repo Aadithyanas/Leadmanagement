@@ -1,14 +1,20 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { Settings } from '../models/Settings.js';
+import { authenticate, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
 
-// Get settings (returns the single global settings doc)
-router.get('/', async (_req: Request, res: Response) => {
+// Get settings (returns settings for current user)
+router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    let settings = await Settings.findOne();
+    let settings = await Settings.findOne({ ownerEmail: req.userEmail });
     if (!settings) {
-      settings = await Settings.create({ notificationEmail: '', enableNotifications: false, apifyApiKey: '' });
+      settings = await Settings.create({ 
+        notificationEmail: '', 
+        enableNotifications: false, 
+        apifyApiKey: '',
+        ownerEmail: req.userEmail
+      });
     }
     res.json(settings);
   } catch (err) {
@@ -17,20 +23,22 @@ router.get('/', async (_req: Request, res: Response) => {
 });
 
 // Update settings
-router.patch('/', async (req: Request, res: Response) => {
+router.patch('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    let settings = await Settings.findOne();
-    if (!settings) {
-      settings = new Settings();
-    }
-    
     const { notificationEmail, enableNotifications, apifyApiKey } = req.body;
     
-    if (notificationEmail !== undefined) settings.notificationEmail = notificationEmail;
-    if (enableNotifications !== undefined) settings.enableNotifications = enableNotifications;
-    if (apifyApiKey !== undefined) settings.apifyApiKey = apifyApiKey;
+    let settings = await Settings.findOneAndUpdate(
+      { ownerEmail: req.userEmail },
+      { 
+        $set: { 
+          notificationEmail, 
+          enableNotifications, 
+          apifyApiKey 
+        } 
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
     
-    await settings.save();
     res.json(settings);
   } catch (err) {
     res.status(500).json({ error: 'Failed to update settings' });

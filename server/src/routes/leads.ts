@@ -2,13 +2,16 @@ import { Router, Request, Response } from 'express';
 import { Lead } from '../models/Lead.js';
 import { Discussion } from '../models/Discussion.js';
 import { sendExpiryNotification } from '../services/mailService.js';
+import { authenticate, AuthRequest } from '../middleware/auth.js';
 
 const router = Router();
 
-// ── GET /api/leads ── List all leads ──
-router.get('/', async (_req: Request, res: Response) => {
+// ── GET /api/leads ── List leads for current user ──
+router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const leads = await Lead.find().sort({ updatedAt: -1 }).lean();
+    const leads = await Lead.find({ ownerEmail: req.userEmail })
+      .sort({ updatedAt: -1 })
+      .lean();
     const formatted = leads.map((l) => ({
       ...l,
       id: l._id.toString(),
@@ -22,10 +25,10 @@ router.get('/', async (_req: Request, res: Response) => {
 });
 
 // ── GET /api/leads/:id ── Get single lead ──
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const lead = await Lead.findById(req.params.id);
-    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+    const lead = await Lead.findOne({ _id: req.params.id, ownerEmail: req.userEmail });
+    if (!lead) return res.status(404).json({ error: 'Lead not found or access denied' });
     res.json(lead.toJSON());
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch lead' });
@@ -33,7 +36,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // ── POST /api/leads ── Create lead ──
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { name, company, phone, email, status, industry, hasWebsite, websiteUrl, requirements } = req.body;
     if (!name?.trim()) return res.status(400).json({ error: 'Name is required' });
@@ -47,7 +50,8 @@ router.post('/', async (req: Request, res: Response) => {
       industry: industry || 'Other',
       hasWebsite: !!hasWebsite,
       websiteUrl: websiteUrl?.trim() || '',
-      requirements: requirements?.trim() || ''
+      requirements: requirements?.trim() || '',
+      ownerEmail: req.userEmail
     });
     res.status(201).json(lead.toJSON());
   } catch (err) {
@@ -56,14 +60,14 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // ── PATCH /api/leads/:id ── Update lead ──
-router.patch('/:id', async (req: Request, res: Response) => {
+router.patch('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const lead = await Lead.findByIdAndUpdate(
-      req.params.id,
+    const lead = await Lead.findOneAndUpdate(
+      { _id: req.params.id, ownerEmail: req.userEmail },
       { $set: req.body },
       { new: true, runValidators: true }
     );
-    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+    if (!lead) return res.status(404).json({ error: 'Lead not found or access denied' });
     res.json(lead.toJSON());
   } catch (err) {
     res.status(500).json({ error: 'Failed to update lead' });
@@ -71,15 +75,15 @@ router.patch('/:id', async (req: Request, res: Response) => {
 });
 
 // ── PATCH /api/leads/:id/status ── Update status only ──
-router.patch('/:id/status', async (req: Request, res: Response) => {
+router.patch('/:id/status', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { status } = req.body;
-    const lead = await Lead.findByIdAndUpdate(
-      req.params.id,
+    const lead = await Lead.findOneAndUpdate(
+      { _id: req.params.id, ownerEmail: req.userEmail },
       { status },
       { new: true, runValidators: true }
     );
-    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+    if (!lead) return res.status(404).json({ error: 'Lead not found or access denied' });
     res.json(lead.toJSON());
   } catch (err) {
     res.status(500).json({ error: 'Failed to update status' });
@@ -87,11 +91,11 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
 });
 
 // ── DELETE /api/leads/:id ── Delete lead + its discussions ──
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const lead = await Lead.findByIdAndDelete(req.params.id);
-    if (!lead) return res.status(404).json({ error: 'Lead not found' });
-    await Discussion.deleteMany({ leadId: req.params.id });
+    const lead = await Lead.findOneAndDelete({ _id: req.params.id, ownerEmail: req.userEmail });
+    if (!lead) return res.status(404).json({ error: 'Lead not found or access denied' });
+    await Discussion.deleteMany({ leadId: req.params.id, ownerEmail: req.userEmail });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete lead' });

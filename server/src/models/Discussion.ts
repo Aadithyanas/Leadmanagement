@@ -4,6 +4,7 @@ export interface IDiscussion extends Document {
   leadId: mongoose.Types.ObjectId;
   note: string;
   followUpAt: Date | null;
+  ownerEmail: string;
   createdAt: Date;
 }
 
@@ -12,6 +13,7 @@ const DiscussionSchema = new Schema<IDiscussion>(
     leadId: { type: Schema.Types.ObjectId, ref: 'Lead', required: true, index: true },
     note: { type: String, required: true, trim: true },
     followUpAt: { type: Date, default: null },
+    ownerEmail: { type: String, required: true, index: true },
   },
   {
     timestamps: { createdAt: true, updatedAt: false },
