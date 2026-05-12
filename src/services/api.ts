@@ -295,6 +295,13 @@ export function seedDemoData(): void {
   saveLocalLeads(demoLeads);
 }
 
+export async function createLeadsBulk(leads: CreateLeadInput[]): Promise<{ message: string; count: number }> {
+  return await request('/leads/bulk', {
+    method: 'POST',
+    body: JSON.stringify(leads),
+  });
+}
+
 export async function seedMyData(): Promise<{ message: string; count: number }> {
   return await request('/leads/seed-my-data', { method: 'POST' });
 }

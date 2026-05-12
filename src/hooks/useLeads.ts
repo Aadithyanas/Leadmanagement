@@ -7,6 +7,7 @@ import {
   deleteLead,
   fetchDiscussionsByLeadId,
   createDiscussion,
+  createLeadsBulk,
 } from '@/services/api';
 import type {
   CreateLeadInput,
@@ -53,6 +54,16 @@ export function useUpdateLead() {
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['leads'] });
+    },
+  });
+}
+
+export function useCreateLeadsBulk() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createLeadsBulk,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
     },
   });
 }

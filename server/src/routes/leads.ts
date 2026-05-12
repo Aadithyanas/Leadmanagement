@@ -101,6 +101,27 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Failed to delete lead' });
   }
 });
+// ── POST /api/leads/bulk ── Bulk create leads ──
+router.post('/bulk', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const ownerEmail = req.userEmail;
+    if (!ownerEmail) return res.status(401).json({ error: 'Unauthorized' });
+
+    const leadsData = Array.isArray(req.body) ? req.body : [req.body];
+    
+    const leadsWithOwners = leadsData.map(lead => ({
+      ...lead,
+      ownerEmail
+    }));
+
+    const leads = await Lead.insertMany(leadsWithOwners);
+    res.status(201).json({ message: `Successfully imported ${leads.length} leads.`, count: leads.length });
+  } catch (error: any) {
+    console.error('Bulk import error:', error);
+    res.status(500).json({ error: error.message || 'Failed to bulk import leads' });
+  }
+});
+
 // ── POST /api/leads/seed-my-data ── Populate personal demo data ──
 router.post('/seed-my-data', authenticate, async (req: AuthRequest, res: Response) => {
   try {
