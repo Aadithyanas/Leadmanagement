@@ -1,11 +1,11 @@
 import { motion } from 'framer-motion';
-import { Building2, Clock, MessageSquare, Calendar, Globe, Ban, MapPin } from 'lucide-react';
+import { Building2, Clock, MessageSquare, Calendar, Globe, Ban, MapPin, User } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useLeadStore } from '@/store/useLeadStore';
 import { timeAgo, formatDate, isFollowUpToday, isOverdue } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
 import type { Lead } from '@/types';
-import { useDeleteLead } from '@/hooks/useLeads';
+import { useDeleteLead, useOrgMembers } from '@/hooks/useLeads';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/useToast';
@@ -18,9 +18,11 @@ interface LeadCardProps {
 
 export function LeadCard({ lead, index }: LeadCardProps) {
   const { openTimeline, selectedLeadIds, toggleLeadSelection } = useLeadStore();
+  const { data: members } = useOrgMembers();
   const overdue = isOverdue(lead.followUpAt);
   const todayFU = isFollowUpToday(lead.followUpAt);
   const isMapsLink = lead.websiteUrl?.includes('google.com/maps') || lead.websiteUrl?.includes('goo.gl/maps');
+  const assignee = members?.find(m => m.id === lead.assignedTo);
 
   return (
     <motion.div
@@ -82,17 +84,25 @@ export function LeadCard({ lead, index }: LeadCardProps) {
       {/* Industry & Website */}
       <div className="flex items-center gap-2 mb-2 flex-wrap">
         {lead.industry && lead.industry !== 'Other' && (
-          <span className="inline-flex items-center rounded-md bg-violet-50 dark:bg-violet-950/30 px-2 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
+          <span className="inline-flex items-center rounded-md bg-violet-50 dark:bg-violet-950/30 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300">
             {lead.industry}
           </span>
         )}
         <span className={cn(
-          'inline-flex items-center gap-1 text-xs',
+          'inline-flex items-center gap-1 text-[10px]',
           lead.hasWebsite ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
         )}>
-          {isMapsLink ? <MapPin className="h-3 w-3" /> : (lead.hasWebsite ? <Globe className="h-3 w-3" /> : <Ban className="h-3 w-3" />)}
+          {isMapsLink ? <MapPin className="h-2.5 w-2.5" /> : (lead.hasWebsite ? <Globe className="h-2.5 w-2.5" /> : <Ban className="h-2.5 w-2.5" />)}
           {isMapsLink ? 'View on Maps' : (lead.hasWebsite ? 'Has website' : 'No website')}
         </span>
+        
+        {/* Assignee */}
+        {lead.assignedTo && (
+          <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300">
+            <User className="h-2.5 w-2.5" />
+            {assignee ? (assignee.name || assignee.email) : 'Assigned'}
+          </span>
+        )}
       </div>
 
       {/* Last Discussion */}

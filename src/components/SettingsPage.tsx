@@ -1,11 +1,13 @@
 import { useLeadStore } from '@/store/useLeadStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Compass, Key, Save, Mail } from 'lucide-react';
+import { Compass, Key, Save, Mail, Users, Link as LinkIcon, Copy } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/useToast';
 import { fetchSettings, updateSettings } from '@/services/api';
+
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export function SettingsPage() {
@@ -14,13 +16,15 @@ export function SettingsPage() {
     notificationEmail, setNotificationEmail,
     enableNotifications, setEnableNotifications
   } = useLeadStore();
+  const { activeOrg } = useAuthStore();
+  
   const [keyInput, setKeyInput] = useState(apifyApiKey);
   const [emailInput, setEmailInput] = useState(notificationEmail);
   const [notifEnabled, setNotifEnabled] = useState(enableNotifications);
+  
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
 
-  // Sync with backend on mount
   useEffect(() => {
     fetchSettings().then(settings => {
       setApifyApiKey(settings.apifyApiKey);
@@ -30,7 +34,7 @@ export function SettingsPage() {
       setEmailInput(settings.notificationEmail);
       setNotifEnabled(settings.enableNotifications);
     });
-  }, []);
+  }, [activeOrg]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -70,19 +74,22 @@ export function SettingsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to send test email');
       
-      toast({ title: 'Success', description: 'Test email sent! Check your inbox (and spam folder).', variant: 'success' });
+      toast({ title: 'Success', description: 'Test email sent! Check your inbox.', variant: 'success' });
     } catch (err: any) {
-      toast({ title: 'Mail Error', description: err.message || 'Failed to send test email. Check server credentials.', variant: 'destructive' });
+      toast({ title: 'Mail Error', description: err.message || 'Failed to send test email.', variant: 'destructive' });
     } finally {
       setIsTesting(false);
     }
   };
 
+
+
+
   return (
-    <div className="max-w-3xl space-y-8">
+    <div className="max-w-3xl space-y-8 pb-12">
       <div>
         <h1 className="text-3xl font-bold tracking-tight mb-2">Settings</h1>
-        <p className="text-muted-foreground">Manage your application preferences and external integrations.</p>
+        <p className="text-muted-foreground">Manage your organization and preferences.</p>
       </div>
 
       <div className="border rounded-lg bg-card overflow-hidden">

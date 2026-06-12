@@ -1,4 +1,4 @@
-import { useLeads } from '@/hooks/useLeads';
+import { useFilteredLeads, useOrgMembers } from '@/hooks/useLeads';
 import { useLeadStore } from '@/store/useLeadStore';
 import { LeadCard } from '@/components/LeadCard';
 import { isFollowUpToday, isOverdue } from '@/lib/date-utils';
@@ -8,7 +8,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 
 export function LeadList() {
-  const { data: leads, isLoading } = useLeads();
+  const { data: leads, isLoading } = useFilteredLeads();
+  const { data: members } = useOrgMembers();
   const { searchQuery, statusFilter, viewMode, openTimeline, selectedLeadIds, toggleLeadSelection, setSelectedLeadIds } = useLeadStore();
 
   if (isLoading) {
@@ -97,73 +98,86 @@ export function LeadList() {
                         />
                       </th>
                       <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Name / Company</th>
+                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Assigned</th>
                       <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Industry</th>
                       <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Contact</th>
                       <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {section.leads.map((lead) => (
-                      <tr 
-                        key={lead.id} 
-                        className={cn(
-                          "hover:bg-accent/50 cursor-pointer transition-colors border-l-2",
-                          selectedLeadIds.includes(lead.id) ? "bg-primary/5 border-l-primary" : "border-l-transparent"
-                        )}
-                        onClick={() => openTimeline(lead.id)}
-                      >
-                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                          <Checkbox 
-                            checked={selectedLeadIds.includes(lead.id)}
-                            onCheckedChange={() => toggleLeadSelection(lead.id)}
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="font-medium">{lead.name}</div>
-                          {lead.company && <div className="text-xs text-muted-foreground">{lead.company}</div>}
-                          {lead.websiteUrl && (
-                            <div className={cn(
-                              "flex items-center gap-1 mt-1 text-[10px]",
-                              (lead.websiteUrl.includes('google.com/maps') || lead.websiteUrl.includes('goo.gl/maps')) 
-                                ? "text-primary" 
-                                : "text-emerald-600"
-                            )}>
-                              {(lead.websiteUrl.includes('google.com/maps') || lead.websiteUrl.includes('goo.gl/maps')) 
-                                ? <MapPin className="h-2.5 w-2.5" /> 
-                                : <Globe className="h-2.5 w-2.5" />}
-                              <span className="truncate max-w-[150px]">
+                    {section.leads.map((lead) => {
+                      const assignee = members?.find(m => m.id === lead.assignedTo);
+                      return (
+                        <tr 
+                          key={lead.id} 
+                          className={cn(
+                            "hover:bg-accent/50 cursor-pointer transition-colors border-l-2",
+                            selectedLeadIds.includes(lead.id) ? "bg-primary/5 border-l-primary" : "border-l-transparent"
+                          )}
+                          onClick={() => openTimeline(lead.id)}
+                        >
+                          <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox 
+                              checked={selectedLeadIds.includes(lead.id)}
+                              onCheckedChange={() => toggleLeadSelection(lead.id)}
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium">{lead.name}</div>
+                            {lead.company && <div className="text-xs text-muted-foreground">{lead.company}</div>}
+                            {lead.websiteUrl && (
+                              <div className={cn(
+                                "flex items-center gap-1 mt-1 text-[10px]",
+                                (lead.websiteUrl.includes('google.com/maps') || lead.websiteUrl.includes('goo.gl/maps')) 
+                                  ? "text-primary" 
+                                  : "text-emerald-600"
+                              )}>
                                 {(lead.websiteUrl.includes('google.com/maps') || lead.websiteUrl.includes('goo.gl/maps')) 
-                                  ? 'View on Maps' 
-                                  : 'Website'}
+                                  ? <MapPin className="h-2.5 w-2.5" /> 
+                                  : <Globe className="h-2.5 w-2.5" />}
+                                <span className="truncate max-w-[150px]">
+                                  {(lead.websiteUrl.includes('google.com/maps') || lead.websiteUrl.includes('goo.gl/maps')) 
+                                    ? 'View on Maps' 
+                                    : 'Website'}
+                                </span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {lead.assignedTo ? (
+                              <span className="inline-flex items-center rounded-md bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300">
+                                {assignee ? (assignee.name || assignee.email) : 'Assigned'}
                               </span>
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                           {lead.industry && (
-                            <span className="inline-flex items-center rounded-md bg-violet-50 dark:bg-violet-950/30 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300">
-                              {lead.industry}
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Unassigned</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                             {lead.industry && (
+                              <span className="inline-flex items-center rounded-md bg-violet-50 dark:bg-violet-950/30 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300">
+                                {lead.industry}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-xs">
+                            {lead.email && <div>{lead.email}</div>}
+                            {lead.phone && <div className="text-muted-foreground">{lead.phone}</div>}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                              lead.status === 'New' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
+                              lead.status === 'Contacted' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                              lead.status === 'Qualified' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' :
+                              lead.status === 'Proposal Sent' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' :
+                              lead.status === 'Won' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                              'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                            }`}>
+                              {lead.status}
                             </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-xs">
-                          {lead.email && <div>{lead.email}</div>}
-                          {lead.phone && <div className="text-muted-foreground">{lead.phone}</div>}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                            lead.status === 'New' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
-                            lead.status === 'Contacted' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
-                            lead.status === 'Qualified' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' :
-                            lead.status === 'Proposal Sent' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' :
-                            lead.status === 'Won' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                          }`}>
-                            {lead.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

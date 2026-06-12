@@ -11,7 +11,7 @@ import {
 import { Search, Plus, FileJson, FileSpreadsheet, Keyboard, Unplug, LayoutGrid, List, Download, Trash2, X, CheckCircle2 } from 'lucide-react';
 import type { LeadStatus } from '@/types';
 import { exportLeadsToCSV } from '@/lib/export-utils';
-import { useLeads, useDeleteLead } from '@/hooks/useLeads';
+import { useFilteredLeads, useDeleteLead } from '@/hooks/useLeads';
 import { toast } from '@/hooks/useToast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -28,7 +28,7 @@ export function LeadsPage() {
     openAddLead, setUploadJsonOpen, setUploadSheetOpen, setConnectApifyOpen,
     apifyApiKey, setActiveTab, selectedLeadIds, clearSelection
   } = useLeadStore();
-  const { data: leads } = useLeads();
+  const { data: leads } = useFilteredLeads();
   const deleteLead = useDeleteLead();
 
   const leadsToExport = selectedLeadIds.length > 0 

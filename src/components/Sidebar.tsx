@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Compass, Settings, LogOut, Zap } from 'lucide-react';
+import { LayoutDashboard, Users, Compass, Settings, LogOut, Zap, User } from 'lucide-react';
 import { useLeadStore } from '@/store/useLeadStore';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ export function Sidebar({ onLogout, isOpen, onClose }: SidebarProps) {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'leads', label: 'Leads', icon: Users },
     { id: 'discover', label: 'Discover Leads', icon: Compass },
+    { id: 'profile', label: 'Profile', icon: User },
     { id: 'settings', label: 'Settings', icon: Settings },
   ] as const;
 

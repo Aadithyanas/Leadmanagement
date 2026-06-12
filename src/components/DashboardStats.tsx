@@ -1,10 +1,10 @@
-import { useLeads } from '@/hooks/useLeads';
+import { useFilteredLeads } from '@/hooks/useLeads';
 import { isFollowUpToday, isOverdue } from '@/lib/date-utils';
 import { Users, UserPlus, Trophy, XCircle, Clock, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function DashboardStats() {
-  const { data: leads } = useLeads();
+  const { data: leads } = useFilteredLeads();
   if (!leads) return null;
 
   const stats = [

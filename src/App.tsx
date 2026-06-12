@@ -1,18 +1,27 @@
 import { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Header } from '@/components/Header';
-import { DashboardStats } from '@/components/DashboardStats';
-import { LeadList } from '@/components/LeadList';
+import { Sidebar } from '@/components/Sidebar';
+import { DashboardOverview } from '@/components/DashboardOverview';
+import { LeadsPage } from '@/components/LeadsPage';
+import { DiscoverPage } from '@/components/DiscoverLeads';
+import { SettingsPage } from '@/components/SettingsPage';
+import { ProfilePage } from '@/components/ProfilePage';
+import { LandingPage } from '@/components/LandingPage';
+import { Menu, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useLeadStore } from '@/store/useLeadStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { AuthScreen } from '@/components/AuthScreen';
+import { Toaster } from '@/components/ui/toaster';
 import { AddLeadDialog } from '@/components/AddLeadDialog';
+import { EditLeadDialog } from '@/components/EditLeadDialog';
 import { LeadTimelineDialog } from '@/components/LeadTimelineDialog';
 import { UploadJsonDialog } from '@/components/UploadJsonDialog';
 import { UploadSheetDialog } from '@/components/UploadSheetDialog';
 import { ConnectApifyDialog } from '@/components/ConnectApifyDialog';
-import { AuthScreen } from '@/components/AuthScreen';
-import { Toaster } from '@/components/ui/toaster';
-import { seedDemoData } from '@/services/api';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useLeadStore } from '@/store/useLeadStore';
+import { InviteAcceptScreen } from '@/components/InviteAcceptScreen';
+import { supabase } from '@/lib/supabase';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,21 +29,7 @@ const queryClient = new QueryClient({
   },
 });
 
-interface AuthUser {
-  name: string;
-  email: string;
-}
-
-import { Sidebar } from '@/components/Sidebar';
-import { DashboardOverview } from '@/components/DashboardOverview';
-import { LeadsPage } from '@/components/LeadsPage';
-import { DiscoverPage } from '@/components/DiscoverLeads';
-import { SettingsPage } from '@/components/SettingsPage';
-import { LandingPage } from '@/components/LandingPage';
-import { Menu, Zap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-
-function AppLayout({ user, onLogout }: { user: AuthUser; onLogout: () => void }) {
+function AppLayout({ onLogout }: { onLogout: () => void }) {
   const { activeTab } = useLeadStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -43,7 +38,6 @@ function AppLayout({ user, onLogout }: { user: AuthUser; onLogout: () => void })
       <Sidebar onLogout={onLogout} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       
       <div className="flex-1 flex flex-col min-h-screen">
-        {/* Mobile Header */}
         <header className="lg:hidden flex items-center justify-between p-4 border-b bg-card sticky top-0 z-30">
           <div className="flex items-center gap-2">
             <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-sm">
@@ -69,14 +63,15 @@ function AppLayout({ user, onLogout }: { user: AuthUser; onLogout: () => void })
               {activeTab === 'dashboard' && <DashboardOverview />}
               {activeTab === 'leads' && <LeadsPage />}
               {activeTab === 'discover' && <DiscoverPage />}
+              {activeTab === 'profile' && <ProfilePage />}
               {activeTab === 'settings' && <SettingsPage />}
             </motion.div>
           </AnimatePresence>
         </main>
       </div>
 
-      {/* Global Modals */}
       <AddLeadDialog />
+      <EditLeadDialog />
       <LeadTimelineDialog />
       <UploadJsonDialog />
       <UploadSheetDialog />
@@ -86,28 +81,50 @@ function AppLayout({ user, onLogout }: { user: AuthUser; onLogout: () => void })
 }
 
 export default function App() {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const { user, setUser, activeOrg, setOrgs, setActiveOrg } = useAuthStore();
   const [checking, setChecking] = useState(true);
   const [showLanding, setShowLanding] = useState(true);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
 
-  // Check for persisted session
   useEffect(() => {
-    seedDemoData();
-    const sessionEmail = localStorage.getItem('leadflow_session');
-    if (sessionEmail) {
-      const stored = localStorage.getItem(`leadflow_user_${sessionEmail}`);
-      if (stored) {
-        try {
-          setUser(JSON.parse(stored) as AuthUser);
-          setShowLanding(false); // Skip landing if already logged in
-        } catch { /* ignore */ }
-      }
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('invite');
+    if (token) {
+      localStorage.setItem('leadflow_invite_token', token);
+      setInviteToken(token);
+      window.history.replaceState({}, '', '/');
+    } else {
+      const stored = localStorage.getItem('leadflow_invite_token');
+      if (stored) setInviteToken(stored);
     }
-    setChecking(false);
+    
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user);
+        setShowLanding(false);
+        
+        // Fetch org to prevent flashing AuthScreen
+        const { data: members } = await supabase
+          .from('organization_members')
+          .select('role, team_id, organizations(id, name)')
+          .eq('user_id', session.user.id);
+          
+          if (members && members.length > 0) {
+          const orgsList = members.map(m => ({
+            id: (m.organizations as any).id,
+            name: (m.organizations as any).name,
+            role: m.role as any,
+            teamId: m.team_id
+          }));
+          setOrgs(orgsList);
+          setActiveOrg(orgsList[0]);
+        }
+      }
+      setChecking(false);
+    });
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('leadflow_session');
     setUser(null);
     setShowLanding(true);
     queryClient.clear();
@@ -121,20 +138,25 @@ export default function App() {
     );
   }
 
-  // Show Landing Page first if not logged in
-  if (!user && showLanding) {
+  // If we have an invite token AND the user is logged in, show the accept screen
+  if (inviteToken && user) {
+    return <InviteAcceptScreen token={inviteToken} onComplete={() => {
+      setInviteToken(null);
+      localStorage.removeItem('leadflow_invite_token');
+      window.history.replaceState({}, '', '/');
+    }} />;
+  }
+
+  if (!user && showLanding && !inviteToken) {
     return <LandingPage onGetStarted={() => setShowLanding(false)} />;
   }
 
   return (
     <QueryClientProvider client={queryClient}>
-      {user ? (
-        <AppLayout user={user} onLogout={handleLogout} />
+      {user && activeOrg ? (
+        <AppLayout onLogout={handleLogout} />
       ) : (
-        <AuthScreen onLogin={(u) => {
-          setUser(u);
-          setShowLanding(false);
-        }} />
+        <AuthScreen onComplete={() => setShowLanding(false)} />
       )}
       <Toaster />
     </QueryClientProvider>

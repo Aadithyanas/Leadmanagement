@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
@@ -10,10 +10,10 @@ import {
 } from '@/components/ui/select';
 import { useLeadStore } from '@/store/useLeadStore';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useFilteredLeads, useCreateLead, useOrgMembers, useAssignableMembers, useTeams } from '@/hooks/useLeads';
+import { useFilteredLeads, useUpdateLead, useAssignableMembers, useCreateDiscussion, useTeams } from '@/hooks/useLeads';
 import { toast } from '@/hooks/useToast';
 import { Loader2, Globe, Ban, Plus, X, Users } from 'lucide-react';
-import type { Industry } from '@/types';
+import type { Industry, LeadStatus } from '@/types';
 
 const INDUSTRIES: Industry[] = [
   'Restaurant', 'Food & Beverage', 'Retail', 'Healthcare', 'Technology',
@@ -21,18 +21,25 @@ const INDUSTRIES: Industry[] = [
   'Hospitality', 'Other',
 ];
 
-export function AddLeadDialog() {
-  const { isAddLeadOpen, closeAddLead } = useLeadStore();
+const STATUSES: LeadStatus[] = [
+  'New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost'
+];
+
+export function EditLeadDialog() {
+  const { isEditLeadOpen, closeEditLead, editingLeadId } = useLeadStore();
   const { activeOrg } = useAuthStore();
+  const { data: leads } = useFilteredLeads();
   const assignableMembers = useAssignableMembers();
   const { data: teams } = useTeams();
-  const createLead = useCreateLead();
-  const [selectedTeamId, setSelectedTeamId] = useState<string>(
-    activeOrg?.role === 'leader' ? (activeOrg.teamId || 'unassigned') : 'all'
-  );
+  const updateLead = useUpdateLead();
+  const createDiscussion = useCreateDiscussion();
+  
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('all');
+  
   const [form, setForm] = useState({
     name: '', company: '', phone: '', email: '',
     industry: 'Other' as Industry,
+    status: 'New' as LeadStatus,
     hasWebsite: false,
     websiteUrl: '',
     requirements: '',
@@ -54,33 +61,106 @@ export function AddLeadDialog() {
     setCustomFields(newFields);
   };
 
+  useEffect(() => {
+    if (isEditLeadOpen && editingLeadId && leads) {
+      const lead = leads.find(l => l.id === editingLeadId);
+      if (lead) {
+        setForm({
+          name: lead.name,
+          company: lead.company || '',
+          phone: lead.phone || '',
+          email: lead.email || '',
+          industry: lead.industry,
+          status: lead.status,
+          hasWebsite: lead.hasWebsite,
+          websiteUrl: lead.websiteUrl || '',
+          requirements: lead.requirements || '',
+          assignedTo: lead.assignedTo || '',
+        });
+        
+        if (lead.customFields) {
+          const fieldsArray = Object.entries(lead.customFields).map(([key, value]) => ({ key, value }));
+          setCustomFields(fieldsArray);
+        } else {
+          setCustomFields([]);
+        }
+
+        if (lead.assignedTo && assignableMembers) {
+          const assignedMember = assignableMembers.find(m => m.id === lead.assignedTo);
+          if (activeOrg?.role === 'leader') {
+            setSelectedTeamId(activeOrg.teamId || 'unassigned');
+          } else if (assignedMember?.teamId) {
+            setSelectedTeamId(assignedMember.teamId);
+          } else {
+            setSelectedTeamId('all');
+          }
+        } else {
+          setSelectedTeamId(activeOrg?.role === 'leader' ? (activeOrg.teamId || 'unassigned') : 'all');
+        }
+      }
+    }
+  }, [isEditLeadOpen, editingLeadId]); // ONLY run when dialog opens or lead ID changes
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || !editingLeadId) return;
+    
+    const lead = leads?.find(l => l.id === editingLeadId);
+    if (!lead) return;
+
+    // Detect changes
+    const changes: string[] = [];
+    if (lead.name !== form.name.trim()) changes.push(`Name to "${form.name.trim()}"`);
+    if (lead.company !== form.company.trim()) changes.push(`Company to "${form.company.trim()}"`);
+    if (lead.phone !== form.phone.trim()) changes.push(`Phone to "${form.phone.trim()}"`);
+    if (lead.email !== form.email.trim()) changes.push(`Email to "${form.email.trim()}"`);
+    if (lead.industry !== form.industry) changes.push(`Industry to "${form.industry}"`);
+    if (lead.status !== form.status) changes.push(`Status to "${form.status}"`);
+    if (lead.websiteUrl !== form.websiteUrl.trim()) changes.push(`Website URL to "${form.websiteUrl.trim()}"`);
+    if (lead.assignedTo !== form.assignedTo) {
+      const assignedName = form.assignedTo === 'unassigned' || !form.assignedTo ? 'Unassigned' : (assignableMembers?.find(m => m.id === form.assignedTo)?.name || 'a member');
+      changes.push(`Assigned to ${assignedName}`);
+    }
+
+    const newCustomFields = customFields.reduce((acc, curr) => {
+      if (curr.key.trim() && curr.value.trim()) acc[curr.key.trim()] = curr.value.trim();
+      return acc;
+    }, {} as Record<string, string>);
+
+    if (JSON.stringify(lead.customFields || {}) !== JSON.stringify(newCustomFields)) {
+      changes.push(`Custom Fields updated`);
+    }
+
     try {
-      await createLead.mutateAsync({
-        name: form.name.trim(),
-        company: form.company.trim(),
-        phone: form.phone.trim(),
-        email: form.email.trim(),
-        status: 'New',
-        industry: form.industry,
-        hasWebsite: form.hasWebsite,
-        websiteUrl: form.websiteUrl.trim(),
-        requirements: form.requirements.trim(),
-        assignedTo: form.assignedTo || undefined,
-        customFields: customFields.reduce((acc, curr) => {
-          if (curr.key.trim() && curr.value.trim()) acc[curr.key.trim()] = curr.value.trim();
-          return acc;
-        }, {} as Record<string, string>),
+      await updateLead.mutateAsync({
+        id: editingLeadId,
+        updates: {
+          name: form.name.trim(),
+          company: form.company.trim(),
+          phone: form.phone.trim(),
+          email: form.email.trim(),
+          status: form.status,
+          industry: form.industry,
+          hasWebsite: form.hasWebsite,
+          websiteUrl: form.websiteUrl.trim(),
+          requirements: form.requirements.trim(),
+          assignedTo: form.assignedTo === 'unassigned' ? null : (form.assignedTo || null),
+          customFields: newCustomFields,
+        }
       });
-      toast({ title: 'Lead created', description: `${form.name} has been added.`, variant: 'success' });
-      setForm({ name: '', company: '', phone: '', email: '', industry: 'Other', hasWebsite: false, websiteUrl: '', requirements: '', assignedTo: '' });
-      setCustomFields([]);
-      setSelectedTeamId('all');
-      closeAddLead();
+
+      if (changes.length > 0) {
+        await createDiscussion.mutateAsync({
+          leadId: editingLeadId,
+          note: `[System] Lead updated: ${changes.join(', ')}`,
+          followUpAt: null,
+        });
+      }
+
+      toast({ title: 'Lead updated', description: `${form.name} has been updated.`, variant: 'success' });
+      closeEditLead();
     } catch {
-      toast({ title: 'Error', description: 'Failed to create lead.', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to update lead.', variant: 'destructive' });
     }
   };
 
@@ -93,23 +173,23 @@ export function AddLeadDialog() {
   });
 
   return (
-    <Dialog open={isAddLeadOpen} onOpenChange={(o) => !o && closeAddLead()}>
+    <Dialog open={isEditLeadOpen} onOpenChange={(o) => !o && closeEditLead()}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Lead</DialogTitle>
-          <DialogDescription>Enter the client's information and requirements.</DialogDescription>
+          <DialogTitle>Edit Lead</DialogTitle>
+          <DialogDescription>Modify the details of this lead.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name & Company */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="lead-name">Name *</Label>
-              <Input id="lead-name" placeholder="John Doe" required value={form.name}
+              <Label htmlFor="edit-lead-name">Name *</Label>
+              <Input id="edit-lead-name" placeholder="John Doe" required value={form.name}
                 onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="lead-company">Company</Label>
-              <Input id="lead-company" placeholder="Acme Corp" value={form.company}
+              <Label htmlFor="edit-lead-company">Company</Label>
+              <Input id="edit-lead-company" placeholder="Acme Corp" value={form.company}
                 onChange={(e) => setForm((p) => ({ ...p, company: e.target.value }))} />
             </div>
           </div>
@@ -117,30 +197,47 @@ export function AddLeadDialog() {
           {/* Phone & Email */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="lead-phone">Phone</Label>
-              <Input id="lead-phone" placeholder="+1-555-0100" value={form.phone}
+              <Label htmlFor="edit-lead-phone">Phone</Label>
+              <Input id="edit-lead-phone" placeholder="+1-555-0100" value={form.phone}
                 onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="lead-email">Email</Label>
-              <Input id="lead-email" type="email" placeholder="john@acme.com" value={form.email}
+              <Label htmlFor="edit-lead-email">Email</Label>
+              <Input id="edit-lead-email" type="email" placeholder="john@acme.com" value={form.email}
                 onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} />
             </div>
           </div>
 
-          {/* Industry */}
-          <div className="space-y-2">
-            <Label>Industry / Business Type</Label>
-            <Select value={form.industry} onValueChange={(v) => setForm((p) => ({ ...p, industry: v as Industry }))}>
-              <SelectTrigger id="lead-industry">
-                <SelectValue placeholder="Select industry" />
-              </SelectTrigger>
-              <SelectContent>
-                {INDUSTRIES.map((ind) => (
-                  <SelectItem key={ind} value={ind}>{ind}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            {/* Industry */}
+            <div className="space-y-2">
+              <Label>Industry</Label>
+              <Select value={form.industry} onValueChange={(v) => setForm((p) => ({ ...p, industry: v as Industry }))}>
+                <SelectTrigger id="edit-lead-industry">
+                  <SelectValue placeholder="Select industry" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INDUSTRIES.map((ind) => (
+                    <SelectItem key={ind} value={ind}>{ind}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Status */}
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={form.status} onValueChange={(v) => setForm((p) => ({ ...p, status: v as LeadStatus }))}>
+                <SelectTrigger id="edit-lead-status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUSES.map((st) => (
+                    <SelectItem key={st} value={st}>{st}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Has Website Toggle */}
@@ -155,7 +252,7 @@ export function AddLeadDialog() {
                 onClick={() => setForm((p) => ({ ...p, hasWebsite: true }))}
               >
                 <Globe className="h-4 w-4" />
-                Yes, has website
+                Yes
               </Button>
               <Button
                 type="button"
@@ -165,7 +262,7 @@ export function AddLeadDialog() {
                 onClick={() => setForm((p) => ({ ...p, hasWebsite: false, websiteUrl: '' }))}
               >
                 <Ban className="h-4 w-4" />
-                No website
+                No
               </Button>
             </div>
           </div>
@@ -173,8 +270,8 @@ export function AddLeadDialog() {
           {/* Website URL (conditional) */}
           {form.hasWebsite && (
             <div className="space-y-2 animate-slide-in">
-              <Label htmlFor="lead-website">Website URL</Label>
-              <Input id="lead-website" type="url" placeholder="https://example.com" value={form.websiteUrl}
+              <Label htmlFor="edit-lead-website">Website URL</Label>
+              <Input id="edit-lead-website" type="url" placeholder="https://example.com" value={form.websiteUrl}
                 onChange={(e) => setForm((p) => ({ ...p, websiteUrl: e.target.value }))} />
             </div>
           )}
@@ -222,10 +319,10 @@ export function AddLeadDialog() {
 
           {/* Requirements */}
           <div className="space-y-2">
-            <Label htmlFor="lead-requirements">What does the client need?</Label>
+            <Label htmlFor="edit-lead-requirements">Requirements</Label>
             <textarea
-              id="lead-requirements"
-              placeholder="e.g. Need a website for their restaurant, want online ordering system, need marketing help..."
+              id="edit-lead-requirements"
+              placeholder="e.g. Need a website for their restaurant..."
               value={form.requirements}
               onChange={(e) => setForm((p) => ({ ...p, requirements: e.target.value }))}
               className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none min-h-[80px]"
@@ -274,10 +371,10 @@ export function AddLeadDialog() {
           </div>
 
           <DialogFooter className="pt-4">
-            <Button type="button" variant="outline" onClick={closeAddLead}>Cancel</Button>
-            <Button type="submit" disabled={createLead.isPending || !form.name.trim()}>
-              {createLead.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              Save Lead
+            <Button type="button" variant="outline" onClick={closeEditLead}>Cancel</Button>
+            <Button type="submit" disabled={updateLead.isPending || !form.name.trim()}>
+              {updateLead.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Save Changes
             </Button>
           </DialogFooter>
         </form>

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { LeadStatus } from '@/types';
 
-type Tab = 'dashboard' | 'leads' | 'discover' | 'settings';
+type Tab = 'dashboard' | 'leads' | 'discover' | 'settings' | 'profile';
 
 interface LeadStoreState {
   searchQuery: string;
@@ -19,6 +19,8 @@ interface LeadStoreState {
   notificationEmail: string;
   enableNotifications: boolean;
   selectedLeadIds: string[];
+  isEditLeadOpen: boolean;
+  editingLeadId: string | null;
 
   setSearchQuery: (q: string) => void;
   setStatusFilter: (s: LeadStatus | 'All') => void;
@@ -29,6 +31,8 @@ interface LeadStoreState {
   closeTimeline: () => void;
   openAddLead: () => void;
   closeAddLead: () => void;
+  openEditLead: (leadId: string) => void;
+  closeEditLead: () => void;
   setUploadJsonOpen: (open: boolean) => void;
   setUploadSheetOpen: (open: boolean) => void;
   setConnectApifyOpen: (open: boolean) => void;
@@ -56,6 +60,8 @@ export const useLeadStore = create<LeadStoreState>((set) => ({
   notificationEmail: localStorage.getItem('leadflow_notification_email') || '',
   enableNotifications: localStorage.getItem('leadflow_enable_notifications') === 'true',
   selectedLeadIds: [],
+  isEditLeadOpen: false,
+  editingLeadId: null,
 
   setSearchQuery: (q) => set({ searchQuery: q }),
   setStatusFilter: (s) => set({ statusFilter: s }),
@@ -73,6 +79,8 @@ export const useLeadStore = create<LeadStoreState>((set) => ({
 
   openAddLead: () => set({ isAddLeadOpen: true }),
   closeAddLead: () => set({ isAddLeadOpen: false }),
+  openEditLead: (leadId) => set({ editingLeadId: leadId, isEditLeadOpen: true }),
+  closeEditLead: () => set({ editingLeadId: null, isEditLeadOpen: false }),
   setUploadJsonOpen: (open) => set({ isUploadJsonOpen: open }),
   setUploadSheetOpen: (open) => set({ isUploadSheetOpen: open }),
   setConnectApifyOpen: (open) => set({ isConnectApifyOpen: open }),

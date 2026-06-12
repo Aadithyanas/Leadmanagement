@@ -1,9 +1,10 @@
-/**
- * API Service — Connects to the Express + MongoDB backend.
- * Falls back to localStorage if the server is unreachable.
- */
-
+import { supabase } from '../lib/supabase';
 import type { Lead, Discussion, CreateLeadInput, CreateDiscussionInput, LeadStatus } from '@/types';
+import type { Database } from '../types/supabase';
+import { useAuthStore } from '../store/useAuthStore';
+
+type DbLead = Database['public']['Tables']['leads']['Row'];
+type DbDiscussion = Database['public']['Tables']['discussions']['Row'];
 
 export interface GlobalSettings {
   id?: string;
@@ -12,302 +13,439 @@ export interface GlobalSettings {
   apifyApiKey: string;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const getOrgId = () => {
+  const org = useAuthStore.getState().activeOrg;
+  if (!org) throw new Error('No active organization');
+  return org.id;
+};
+
+function mapLeadFromDb(db: DbLead): Lead {
+  return {
+    id: db.id,
+    name: db.name,
+    company: db.company || '',
+    phone: db.phone || '',
+    email: db.email || '',
+    status: (db.status as LeadStatus) || 'New',
+    industry: (db.industry as any) || 'Other',
+    hasWebsite: db.has_website || false,
+    websiteUrl: db.website_url || '',
+    requirements: db.requirements || '',
+    lastDiscussion: db.last_discussion || '',
+    followUpAt: db.follow_up_at,
+    createdAt: db.created_at || new Date().toISOString(),
+    updatedAt: db.updated_at || new Date().toISOString(),
+    assignedTo: db.assigned_to,
+    customFields: (db.custom_fields as Record<string, string>) || {},
+  };
+}
+
+function mapDiscussionFromDb(db: DbDiscussion): Discussion {
+  return {
+    id: db.id,
+    leadId: db.lead_id,
+    note: db.note,
+    followUpAt: db.follow_up_at,
+    createdAt: db.created_at || new Date().toISOString(),
+  };
+}
 
 export async function checkHealth(): Promise<{ status: string; db: string }> {
-  const res = await fetch(`${API_BASE}/health`);
-  if (!res.ok) throw new Error('Unreachable');
-  return res.json();
+  return { status: 'ok', db: 'connected' };
 }
 
-// ---------- HTTP helpers ----------
+export interface OrgMember {
+  id: string;
+  name: string;
+  email: string;
+  role: 'owner' | 'admin' | 'leader' | 'member';
+  createdAt: string;
+  teamId?: string | null;
+  teamName?: string | null;
+}
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const userEmail = localStorage.getItem('leadflow_session') || '';
-  const res = await fetch(`${API_BASE}${url}`, {
-    headers: { 
-      'Content-Type': 'application/json',
-      'x-user-email': userEmail
-    },
-    ...options,
+export interface Team {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface Invitation {
+  id: string;
+  orgId: string;
+  teamId?: string;
+  role: 'admin' | 'leader' | 'member';
+  token: string;
+  email: string;
+}
+
+export async function fetchOrgMembers(): Promise<OrgMember[]> {
+  const { data, error } = await supabase.rpc('get_org_members', {
+    target_org_id: getOrgId(),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || 'API request failed');
-  }
-  return res.json();
+  if (error) throw error;
+  return data.map((r: any) => ({
+    id: r.id,
+    name: r.name,
+    email: r.email,
+    role: r.role,
+    createdAt: r.created_at,
+    teamId: r.team_id,
+    teamName: r.team_name,
+  }));
 }
 
-// ---------- Lead CRUD ----------
+export async function updateOrgMemberTeam(memberId: string, teamId: string | null): Promise<void> {
+  const { error } = await supabase
+    .from('organization_members')
+    .update({ team_id: teamId })
+    .eq('user_id', memberId)
+    .eq('org_id', getOrgId());
+    
+  if (error) throw error;
+}
+
+export async function updateOrgMemberRole(memberId: string, role: string): Promise<void> {
+  const { error } = await supabase
+    .from('organization_members')
+    .update({ role })
+    .eq('user_id', memberId)
+    .eq('org_id', getOrgId());
+    
+  if (error) throw error;
+}
+
+export async function fetchTeams(): Promise<Team[]> {
+  const orgId = getOrgId();
+  const { data, error } = await supabase
+    .from('teams')
+    .select('*')
+    .eq('org_id', orgId)
+    .order('name');
+  if (error) throw new Error(error.message);
+  return (data || []).map(t => ({
+    id: t.id,
+    name: t.name,
+    createdAt: t.created_at,
+  }));
+}
+
+export async function createTeam(name: string): Promise<Team> {
+  const orgId = getOrgId();
+  const { data, error } = await supabase
+    .from('teams')
+    .insert({ org_id: orgId, name })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return { id: data.id, name: data.name, createdAt: data.created_at };
+}
+
+export async function createInvitation(email: string, role: string, teamId?: string): Promise<Invitation> {
+  const orgId = getOrgId();
+  const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  
+  const { data, error } = await supabase
+    .from('organization_invites')
+    .insert({
+      org_id: orgId,
+      email,
+      role,
+      team_id: teamId || null,
+      token,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return {
+    id: data.id,
+    orgId: data.org_id,
+    teamId: data.team_id,
+    role: data.role as any,
+    token: data.token,
+    email: data.email,
+  };
+}
+
+export async function consumeInvitation(token: string): Promise<{ orgId: string, role: string, teamId?: string }> {
+  const { data: inv, error: invError } = await supabase
+    .from('organization_invites')
+    .select('*')
+    .eq('token', token)
+    .single();
+    
+  if (invError || !inv) throw new Error('Invalid or expired invitation token');
+  
+  const user = useAuthStore.getState().user;
+  if (!user) throw new Error('Not logged in');
+
+  const { error: joinError } = await supabase
+    .from('organization_members')
+    .insert({
+      org_id: inv.org_id,
+      user_id: user.id,
+      role: inv.role,
+      team_id: inv.team_id,
+    });
+    
+  if (joinError) throw new Error(joinError.message);
+  
+  // Cleanup invitation
+  await supabase.from('organization_invites').delete().eq('id', inv.id);
+  
+  return { orgId: inv.org_id, role: inv.role, teamId: inv.team_id };
+}
 
 export async function fetchLeads(): Promise<Lead[]> {
-  try {
-    return await request<Lead[]>('/leads');
-  } catch {
-    console.warn('API unreachable, falling back to localStorage');
-    return getLocalLeads();
+  const org = useAuthStore.getState().activeOrg;
+  const user = useAuthStore.getState().user;
+  if (!org || !user) throw new Error('Not logged in');
+  
+  const orgId = org.id;
+  let query = supabase
+    .from('leads')
+    .select('*')
+    .eq('org_id', orgId)
+    .order('created_at', { ascending: false });
+
+  if (org.role === 'member') {
+    // Members only see leads assigned to them
+    query = query.eq('assigned_to', user.id);
+  } else if (org.role === 'leader' && org.teamId) {
+    // Leaders see leads assigned to anyone in their team
+    const { data: teamMembers } = await supabase
+      .from('organization_members')
+      .select('user_id')
+      .eq('team_id', org.teamId);
+    
+    if (teamMembers && teamMembers.length > 0) {
+      const teamUserIds = teamMembers.map((m: any) => m.user_id);
+      // Include the leader's own user.id just in case they are not in the team members list
+      if (!teamUserIds.includes(user.id)) {
+        teamUserIds.push(user.id);
+      }
+      query = query.in('assigned_to', teamUserIds);
+    } else {
+      // Fallback if no team members found, just show their own
+      query = query.eq('assigned_to', user.id);
+    }
   }
+
+  const { data, error } = await query;
+
+  if (error) throw new Error(error.message);
+  return (data || []).map(mapLeadFromDb);
 }
 
 export async function fetchLeadById(id: string): Promise<Lead | undefined> {
-  try {
-    return await request<Lead>(`/leads/${id}`);
-  } catch {
-    return getLocalLeads().find((l) => l.id === id);
-  }
+  const orgId = getOrgId();
+  const { data, error } = await supabase
+    .from('leads')
+    .select('*')
+    .eq('org_id', orgId)
+    .eq('id', id)
+    .single();
+
+  if (error) return undefined;
+  return mapLeadFromDb(data);
 }
 
 export async function createLead(input: CreateLeadInput): Promise<Lead> {
-  try {
-    const lead = await request<Lead>('/leads', {
-      method: 'POST',
-      body: JSON.stringify(input),
-    });
-    return lead;
-  } catch {
-    return createLocalLead(input);
-  }
+  const orgId = getOrgId();
+  const { data, error } = await supabase
+    .from('leads')
+    .insert({
+      org_id: orgId,
+      name: input.name,
+      company: input.company,
+      phone: input.phone,
+      email: input.email,
+      status: input.status,
+      industry: input.industry,
+      has_website: input.hasWebsite,
+      website_url: input.websiteUrl,
+      requirements: input.requirements,
+      assigned_to: input.assignedTo || null,
+      custom_fields: input.customFields || {},
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return mapLeadFromDb(data);
 }
 
 export async function updateLead(id: string, updates: Partial<Lead>): Promise<Lead> {
-  try {
-    return await request<Lead>(`/leads/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(updates),
-    });
-  } catch {
-    return updateLocalLead(id, updates);
-  }
+  const orgId = getOrgId();
+  const payload: any = {};
+  if (updates.name !== undefined) payload.name = updates.name;
+  if (updates.company !== undefined) payload.company = updates.company;
+  if (updates.phone !== undefined) payload.phone = updates.phone;
+  if (updates.email !== undefined) payload.email = updates.email;
+  if (updates.status !== undefined) payload.status = updates.status;
+  if (updates.industry !== undefined) payload.industry = updates.industry;
+  if (updates.hasWebsite !== undefined) payload.has_website = updates.hasWebsite;
+  if (updates.websiteUrl !== undefined) payload.website_url = updates.websiteUrl;
+  if (updates.requirements !== undefined) payload.requirements = updates.requirements;
+  if (updates.lastDiscussion !== undefined) payload.last_discussion = updates.lastDiscussion;
+  if (updates.followUpAt !== undefined) payload.follow_up_at = updates.followUpAt;
+  if (updates.assignedTo !== undefined) payload.assigned_to = updates.assignedTo;
+  if (updates.customFields !== undefined) payload.custom_fields = updates.customFields;
+
+  const { data, error } = await supabase
+    .from('leads')
+    .update(payload)
+    .eq('org_id', orgId)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return mapLeadFromDb(data);
 }
 
 export async function updateLeadStatus(id: string, status: LeadStatus): Promise<Lead> {
-  try {
-    return await request<Lead>(`/leads/${id}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    });
-  } catch {
-    return updateLocalLead(id, { status });
-  }
+  return updateLead(id, { status });
 }
 
 export async function deleteLead(id: string): Promise<void> {
-  try {
-    await request(`/leads/${id}`, { method: 'DELETE' });
-  } catch {
-    deleteLocalLead(id);
-  }
+  const orgId = getOrgId();
+  const { error } = await supabase
+    .from('leads')
+    .delete()
+    .eq('org_id', orgId)
+    .eq('id', id);
+
+  if (error) throw new Error(error.message);
 }
 
-// ---------- Discussion CRUD ----------
-
 export async function fetchDiscussionsByLeadId(leadId: string): Promise<Discussion[]> {
-  try {
-    return await request<Discussion[]>(`/discussions/${leadId}`);
-  } catch {
-    return getLocalDiscussions().filter((d) => d.leadId === leadId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
+  const orgId = getOrgId();
+  const { data, error } = await supabase
+    .from('discussions')
+    .select('*')
+    .eq('org_id', orgId)
+    .eq('lead_id', leadId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data || []).map(mapDiscussionFromDb);
 }
 
 export async function createDiscussion(input: CreateDiscussionInput): Promise<Discussion> {
-  try {
-    return await request<Discussion>('/discussions', {
-      method: 'POST',
-      body: JSON.stringify(input),
-    });
-  } catch {
-    return createLocalDiscussion(input);
-  }
+  const orgId = getOrgId();
+  const { data, error } = await supabase
+    .from('discussions')
+    .insert({
+      org_id: orgId,
+      lead_id: input.leadId,
+      note: input.note,
+      follow_up_at: input.followUpAt,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  
+  await updateLead(input.leadId, {
+    lastDiscussion: input.note,
+    followUpAt: input.followUpAt || undefined,
+  });
+
+  return mapDiscussionFromDb(data);
 }
 
-// ---------- Settings ----------
-
-const SETTINGS_KEY = 'leadflow_global_settings';
-
 export async function fetchSettings(): Promise<GlobalSettings> {
-  try {
-    return await request<GlobalSettings>('/settings');
-  } catch {
-    const local = localStorage.getItem(SETTINGS_KEY);
-    return local ? JSON.parse(local) : { notificationEmail: '', enableNotifications: false, apifyApiKey: '' };
+  const orgId = getOrgId();
+  const { data, error } = await supabase
+    .from('settings')
+    .select('*')
+    .eq('org_id', orgId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return { notificationEmail: '', enableNotifications: false, apifyApiKey: '' };
   }
+
+  return {
+    id: data.id,
+    notificationEmail: data.notification_email || '',
+    enableNotifications: data.enable_notifications || false,
+    apifyApiKey: data.apify_api_key || '',
+  };
 }
 
 export async function updateSettings(updates: Partial<GlobalSettings>): Promise<GlobalSettings> {
-  try {
-    const settings = await request<GlobalSettings>('/settings', {
-      method: 'PATCH',
-      body: JSON.stringify(updates),
-    });
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-    return settings;
-  } catch {
-    const current = await fetchSettings();
-    const updated = { ...current, ...updates };
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
-    return updated;
-  }
-}
-
-// ---------- localStorage fallback ----------
-
-const LEADS_KEY = 'leadflow_leads';
-const DISCUSSIONS_KEY = 'leadflow_discussions';
-
-function generateId(): string {
-  return crypto.randomUUID?.() ?? Math.random().toString(36).slice(2, 11);
-}
-
-function getLocalLeads(): Lead[] {
-  try { return JSON.parse(localStorage.getItem(LEADS_KEY) || '[]'); }
-  catch { return []; }
-}
-
-function saveLocalLeads(leads: Lead[]) {
-  localStorage.setItem(LEADS_KEY, JSON.stringify(leads));
-}
-
-function getLocalDiscussions(): Discussion[] {
-  try { return JSON.parse(localStorage.getItem(DISCUSSIONS_KEY) || '[]'); }
-  catch { return []; }
-}
-
-function saveLocalDiscussions(discussions: Discussion[]) {
-  localStorage.setItem(DISCUSSIONS_KEY, JSON.stringify(discussions));
-}
-
-function createLocalLead(input: CreateLeadInput): Lead {
-  const now = new Date().toISOString();
-  const lead: Lead = {
-    id: generateId(), 
-    name: input.name, 
-    company: input.company || '', 
-    phone: input.phone || '',
-    email: input.email || '', 
-    status: input.status || 'New', 
-    industry: input.industry || 'Other',
-    hasWebsite: input.hasWebsite || false,
-    websiteUrl: input.websiteUrl || '',
-    requirements: input.requirements || '',
-    lastDiscussion: '',
-    followUpAt: null, 
-    createdAt: now, 
-    updatedAt: now,
+  const orgId = getOrgId();
+  const current = await fetchSettings();
+  
+  const payload = {
+    org_id: orgId,
+    notification_email: updates.notificationEmail ?? current.notificationEmail,
+    enable_notifications: updates.enableNotifications ?? current.enableNotifications,
+    apify_api_key: updates.apifyApiKey ?? current.apifyApiKey,
   };
-  const leads = getLocalLeads();
-  leads.push(lead);
-  saveLocalLeads(leads);
-  return lead;
-}
 
-function updateLocalLead(id: string, updates: Partial<Lead>): Lead {
-  const leads = getLocalLeads();
-  const idx = leads.findIndex((l) => l.id === id);
-  if (idx === -1) throw new Error('Lead not found');
-  leads[idx] = { ...leads[idx]!, ...updates, updatedAt: new Date().toISOString() };
-  saveLocalLeads(leads);
-  return leads[idx]!;
-}
-
-function deleteLocalLead(id: string) {
-  saveLocalLeads(getLocalLeads().filter((l) => l.id !== id));
-  saveLocalDiscussions(getLocalDiscussions().filter((d) => d.leadId !== id));
-}
-
-function createLocalDiscussion(input: CreateDiscussionInput): Discussion {
-  const now = new Date().toISOString();
-  const disc: Discussion = {
-    id: generateId(), leadId: input.leadId, note: input.note,
-    followUpAt: input.followUpAt || null, createdAt: now,
-  };
-  const discussions = getLocalDiscussions();
-  discussions.push(disc);
-  saveLocalDiscussions(discussions);
-  // Update parent lead
-  const leads = getLocalLeads();
-  const idx = leads.findIndex((l) => l.id === input.leadId);
-  if (idx !== -1) {
-    leads[idx] = { ...leads[idx]!, lastDiscussion: input.note,
-      followUpAt: input.followUpAt || leads[idx]!.followUpAt, updatedAt: now };
-    saveLocalLeads(leads);
+  if (current.id) {
+    const { data, error } = await supabase
+      .from('settings')
+      .update(payload)
+      .eq('id', current.id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return {
+      id: data.id,
+      notificationEmail: data.notification_email || '',
+      enableNotifications: data.enable_notifications || false,
+      apifyApiKey: data.apify_api_key || '',
+    };
+  } else {
+    const { data, error } = await supabase
+      .from('settings')
+      .insert(payload)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return {
+      id: data.id,
+      notificationEmail: data.notification_email || '',
+      enableNotifications: data.enable_notifications || false,
+      apifyApiKey: data.apify_api_key || '',
+    };
   }
-  return disc;
-}
-
-// ---------- Seed (only for localStorage fallback) ----------
-
-export function seedDemoData(): void {
-  // Only seed localStorage if no server and no local data
-  if (getLocalLeads().length > 0) return;
-
-  const now = new Date();
-  const d = (daysAgo: number) => new Date(now.getTime() - daysAgo * 86400000).toISOString();
-  const future = (daysAhead: number) => new Date(now.getTime() + daysAhead * 86400000).toISOString();
-  const today = () => { const t = new Date(); t.setHours(14, 0, 0, 0); return t.toISOString(); };
-  const yesterday = () => { const t = new Date(); t.setDate(t.getDate() - 1); t.setHours(10, 0, 0, 0); return t.toISOString(); };
-
-  const demoLeads: Lead[] = [
-    { 
-      id: 'lead-1', name: 'Sarah Chen', company: 'TechVision Inc.', phone: '+1-555-0101', email: 'sarah.chen@techvision.com', 
-      status: 'Qualified', industry: 'Technology', hasWebsite: true, websiteUrl: 'https://techvision.com', 
-      requirements: 'Enterprise scale CRM integration', lastDiscussion: 'Very interested in enterprise plan. Wants demo next week.', 
-      followUpAt: today(), createdAt: d(15), updatedAt: d(1) 
-    },
-    { 
-      id: 'lead-2', name: 'Marcus Johnson', company: 'DataFlow Systems', phone: '+1-555-0102', email: 'marcus@dataflow.io', 
-      status: 'Proposal Sent', industry: 'Finance', hasWebsite: true, websiteUrl: 'https://dataflow.io', 
-      requirements: 'Data pipeline automation', lastDiscussion: 'Sent proposal for 50-seat license. Awaiting CFO approval.', 
-      followUpAt: today(), createdAt: d(22), updatedAt: d(2) 
-    },
-    { 
-      id: 'lead-3', name: 'Emily Rodriguez', company: 'GreenScale Analytics', phone: '+1-555-0103', email: 'emily.r@greenscale.com', 
-      status: 'Contacted', industry: 'Retail', hasWebsite: true, websiteUrl: 'https://greenscale.com', 
-      requirements: 'Inventory tracking', lastDiscussion: 'Had introductory call. Interested but budget cycle is Q2.', 
-      followUpAt: yesterday(), createdAt: d(10), updatedAt: d(3) 
-    },
-    { 
-      id: 'lead-4', name: 'Alex Kim', company: 'NovaBright Solutions', phone: '+1-555-0104', email: 'alex.kim@novabright.co', 
-      status: 'New', industry: 'Other', hasWebsite: false, websiteUrl: '', 
-      requirements: 'Route optimization', lastDiscussion: '', 
-      followUpAt: future(3), createdAt: d(2), updatedAt: d(2) 
-    },
-    { 
-      id: 'lead-5', name: 'Priya Sharma', company: 'CloudNine Platform', phone: '+1-555-0105', email: 'priya@cloudnine.dev', 
-      status: 'Won', industry: 'Technology', hasWebsite: true, websiteUrl: 'https://cloudnine.dev', 
-      requirements: 'SaaS platform management', lastDiscussion: 'Contract signed! 100-seat annual deal.', 
-      followUpAt: null, createdAt: d(45), updatedAt: d(5) 
-    },
-    { 
-      id: 'lead-6', name: "James O'Brien", company: 'Meridian Corp', phone: '+1-555-0106', email: 'jobrien@meridian.com', 
-      status: 'Lost', industry: 'Real Estate', hasWebsite: true, websiteUrl: 'https://meridian.com', 
-      requirements: 'Property listing scraper', lastDiscussion: 'Went with competitor.', 
-      followUpAt: future(30), createdAt: d(60), updatedAt: d(8) 
-    },
-    { 
-      id: 'lead-7', name: 'Lisa Wang', company: 'PixelForge Studios', phone: '+1-555-0107', email: 'lisa.wang@pixelforge.art', 
-      status: 'Contacted', industry: 'Other', hasWebsite: true, websiteUrl: 'https://pixelforge.art', 
-      requirements: 'Creative agency CRM', lastDiscussion: 'Left voicemail.', 
-      followUpAt: future(1), createdAt: d(5), updatedAt: d(1) 
-    },
-    { 
-      id: 'lead-8', name: 'Daniel Thompson', company: 'Apex Industries', phone: '+1-555-0108', email: 'dthompson@apex-ind.com', 
-      status: 'Qualified', industry: 'Manufacturing', hasWebsite: true, websiteUrl: 'https://apex-ind.com', 
-      requirements: 'Supply chain visibility', lastDiscussion: 'Needs custom integration.', 
-      followUpAt: yesterday(), createdAt: d(18), updatedAt: d(2) 
-    },
-  ];
-
-  saveLocalLeads(demoLeads);
 }
 
 export async function createLeadsBulk(leads: CreateLeadInput[]): Promise<{ message: string; count: number }> {
-  return await request('/leads/bulk', {
-    method: 'POST',
-    body: JSON.stringify(leads),
-  });
+  const orgId = getOrgId();
+  const payload = leads.map(l => ({
+    org_id: orgId,
+    name: l.name,
+    company: l.company,
+    phone: l.phone,
+    email: l.email,
+    status: l.status,
+    industry: l.industry,
+    has_website: l.hasWebsite,
+    website_url: l.websiteUrl,
+    requirements: l.requirements,
+    assigned_to: l.assignedTo || null,
+    custom_fields: l.customFields || {},
+  }));
+
+  const { error } = await supabase
+    .from('leads')
+    .insert(payload);
+
+  if (error) throw new Error(error.message);
+  return { message: 'Success', count: leads.length };
 }
 
 export async function seedMyData(): Promise<{ message: string; count: number }> {
-  return await request('/leads/seed-my-data', { method: 'POST' });
+  return { message: 'Seed not configured for Supabase directly yet', count: 0 };
+}
+
+export function seedDemoData(): void {
+  console.log('Seed demo data using createLeadsBulk directly in UI for now.');
 }

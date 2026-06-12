@@ -1,0 +1,63 @@
+# Role & Team Based Access Control (RBAC) System
+
+This plan outlines how we will rebuild the Organization and User Login system into a fully scalable Team and Role-Based structure, complete with an email invitation flow.
+
+## 1. Flow Chart
+Here is the step-by-step visual flow of the new invitation and permission system:
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant App as LeadFlow App
+    participant DB as Database
+    actor Invitee as Invited User
+
+    Note over Admin,DB: 1. Admin Invites User
+    Admin->>App: Clicks "Invite Member"
+    Admin->>App: Enters Email, Selects Team (e.g. Sales) & Role (Leader/Member)
+    App->>DB: Generates secure Invite Token & saves pending invite
+    App-->>Admin: Generates Email Draft with unique Link
+    Admin->>Invitee: Sends Email to Invitee
+
+    Note over Invitee,App: 2. Invitee Creates Account
+    Invitee->>App: Clicks link in email (redirected to LeadFlow)
+    App->>App: Verifies Token & shows "Welcome to Organization"
+    Invitee->>App: Creates Account & Logs In
+    App->>DB: Consumes token, adds user to Org with Team & Role
+
+    Note over Invitee,DB: 3. Permissions Take Effect
+    alt is Leader
+        Invitee->>App: Can add new Leads
+        Invitee->>App: Can assign Leads to members in their Team
+        Invitee->>App: Can invite new members to their Team
+    else is Member
+        Invitee->>App: Can only view & edit Leads assigned to them
+        Invitee->>App: Cannot reassign leads or invite users
+    end
+```
+
+## 2. Proposed Changes
+
+### A. Database Schema Updates
+1. **Roles Update**: I will update the system roles from `(owner, member)` to:
+   - `Admin` (Has total control over the organization).
+   - `Leader` (Manages a specific team, can add leads, assign leads, and invite members to their team).
+   - `Member` (Can only work on leads assigned specifically to them).
+2. **Teams Table**: I will create a new `teams` table (e.g., "Sales", "Marketing") so that users can be grouped together.
+3. **Invitations Table**: I will create a new `invitations` table to securely store pending email invites along with their intended Team and Role.
+
+### B. UI: Invite Modal & Email Sending
+I will completely rebuild the "Invite Member" popup. 
+- You will be able to enter the person's **Email Address**.
+- You will select their **Team** from a dropdown.
+- You will select their **Role** (Leader or Member).
+- When you click "Send Invite", it will generate a secure link and automatically open your default Email Client (e.g. Gmail, Outlook) with a pre-written welcome email containing the link! *(This avoids needing expensive 3rd-party email servers while keeping it extremely professional).*
+
+### C. Permission Enforcements
+- **Admins**: Can see all leads, assign anyone to anything, create teams, and invite anyone.
+- **Leaders**: When they open a lead, they can only assign it to people within their own Team. They can also add new members, but only to their Team.
+- **Members**: When they log in, their Lead Pipeline will only show leads that have been specifically assigned to them. They cannot see the "Assign To" dropdown.
+
+## User Review Required
+Does this Flow Chart and permission breakdown exactly match what you are looking for? 
+Specifically, using a `mailto:` link to automatically open your email app and send the invite is the fastest and most reliable way to handle invitations without setting up a backend email server. Let me know if you approve this plan!

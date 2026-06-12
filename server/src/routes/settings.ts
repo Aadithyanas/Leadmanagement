@@ -45,4 +45,26 @@ router.patch('/', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
+import { sendInviteEmail } from '../services/mailService.js';
+
+// Send invite email
+router.post('/send-invite', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { targetEmail, inviteLink, orgName, role } = req.body;
+    
+    if (!targetEmail || !inviteLink || !orgName || !role) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const success = await sendInviteEmail(targetEmail, inviteLink, orgName, role);
+    if (success) {
+      res.json({ message: 'Invite email sent successfully' });
+    } else {
+      res.status(500).json({ error: 'Failed to send invite email from server' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error while sending email' });
+  }
+});
+
 export default router;

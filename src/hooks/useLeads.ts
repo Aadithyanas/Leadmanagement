@@ -8,6 +8,12 @@ import {
   fetchDiscussionsByLeadId,
   createDiscussion,
   createLeadsBulk,
+  fetchOrgMembers,
+  fetchTeams,
+  createTeam,
+  createInvitation,
+  updateOrgMemberTeam,
+  updateOrgMemberRole
 } from '@/services/api';
 import type {
   CreateLeadInput,
@@ -15,8 +21,114 @@ import type {
   LeadStatus,
   Lead,
 } from '@/types';
+import { useAuthStore } from '@/store/useAuthStore';
+
+// ---------- Members & Teams ----------
+export function useOrgMembers() {
+  const activeOrg = useAuthStore((s) => s.activeOrg);
+  return useQuery({
+    queryKey: ['orgMembers', activeOrg?.id],
+    queryFn: fetchOrgMembers,
+    enabled: !!activeOrg?.id, // Admins and leaders need this too
+    staleTime: 60_000,
+  });
+}
+
+export function useTeams() {
+  const activeOrg = useAuthStore((s) => s.activeOrg);
+  return useQuery({
+    queryKey: ['teams', activeOrg?.id],
+    queryFn: fetchTeams,
+    enabled: !!activeOrg?.id,
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateTeam() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createTeam,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['teams'] });
+    },
+  });
+}
+
+export function useUpdateMemberTeam() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ memberId, teamId }: { memberId: string; teamId: string | null }) => 
+      updateOrgMemberTeam(memberId, teamId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orgMembers'] });
+    },
+  });
+}
+
+export function useUpdateMemberRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ memberId, role }: { memberId: string; role: string }) => 
+      updateOrgMemberRole(memberId, role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orgMembers'] });
+    },
+  });
+}
+
+export function useCreateInvitation() {
+  return useMutation({
+    mutationFn: ({ email, role, teamId }: { email: string, role: string, teamId?: string }) => 
+      createInvitation(email, role, teamId),
+  });
+}
 
 // ---------- Leads ----------
+
+export function useFilteredLeads() {
+  const { data: leads, ...rest } = useLeads();
+  const { data: members } = useOrgMembers();
+  const { user, activeOrg } = useAuthStore();
+  
+  if (!leads) return { data: leads, ...rest };
+  
+  if (activeOrg?.role === 'owner' || activeOrg?.role === 'admin' || activeOrg?.role === 'hr') {
+    return { data: leads, ...rest };
+  }
+  
+  const currentUserMember = members?.find(m => m.id === user?.id);
+  
+  if (activeOrg?.role === 'leader') {
+    if (!currentUserMember?.teamId) {
+      return { data: leads.filter(l => l.assignedTo === user?.id || l.assignedTo === null), ...rest };
+    }
+    const teamMemberIds = members?.filter(m => m.teamId === currentUserMember.teamId).map(m => m.id) || [];
+    const filtered = leads.filter(l => l.assignedTo === null || teamMemberIds.includes(l.assignedTo));
+    return { data: filtered, ...rest };
+  }
+  
+  // Member
+  return { data: leads.filter(l => l.assignedTo === user?.id), ...rest };
+}
+
+export function useAssignableMembers() {
+  const { data: members } = useOrgMembers();
+  const { user, activeOrg } = useAuthStore();
+  
+  if (!members) return [];
+  
+  if (activeOrg?.role === 'owner' || activeOrg?.role === 'admin' || activeOrg?.role === 'hr') {
+    return members;
+  }
+  
+  if (activeOrg?.role === 'leader') {
+    const currentUserMember = members.find(m => m.id === user?.id);
+    if (!currentUserMember?.teamId) return [currentUserMember]; // only themselves if no team
+    return members.filter(m => m.teamId === currentUserMember.teamId);
+  }
+  
+  return []; // Members can't assign
+}
 
 export function useLeads() {
   return useQuery({

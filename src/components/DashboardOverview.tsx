@@ -1,5 +1,5 @@
 import { DashboardStats } from '@/components/DashboardStats';
-import { useLeads } from '@/hooks/useLeads';
+import { useFilteredLeads } from '@/hooks/useLeads';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, BarChart, Bar, Legend 
@@ -15,7 +15,7 @@ import { useState } from 'react';
 import { toast } from '@/hooks/useToast';
 
 export function DashboardOverview() {
-  const { data: leads, isLoading } = useLeads();
+  const { data: leads, isLoading } = useFilteredLeads();
   const queryClient = useQueryClient();
   const [isSeeding, setIsSeeding] = useState(false);
 

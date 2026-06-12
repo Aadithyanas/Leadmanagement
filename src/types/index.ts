@@ -36,6 +36,8 @@ export interface Lead {
   createdAt: string;
   updatedAt: string;
   owner?: string;
+  assignedTo?: string | null;
+  customFields?: Record<string, string>;
 }
 
 export interface Discussion {
@@ -56,6 +58,8 @@ export interface CreateLeadInput {
   hasWebsite?: boolean;
   websiteUrl?: string;
   requirements?: string;
+  assignedTo?: string | null;
+  customFields?: Record<string, string>;
 }
 
 export interface CreateDiscussionInput {
