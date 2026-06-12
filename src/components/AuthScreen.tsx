@@ -103,7 +103,8 @@ export function AuthScreen({ onComplete }: AuthScreenProps) {
           email: form.email,
           password: form.password,
           options: {
-            data: { name: form.name }
+            data: { name: form.name },
+            emailRedirectTo: window.location.origin
           }
         });
         if (signUpError) throw signUpError;
