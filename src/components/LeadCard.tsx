@@ -105,18 +105,6 @@ export function LeadCard({ lead, index }: LeadCardProps) {
         )}
       </div>
 
-      {/* Custom Fields */}
-      {lead.customFields && Object.keys(lead.customFields).length > 0 && (
-        <div className="grid grid-cols-2 gap-x-3 gap-y-2 mb-3 bg-secondary/20 p-2.5 rounded-md border border-border/50">
-          {Object.entries(lead.customFields).map(([k, v]) => (
-            <div key={k} className="flex flex-col min-w-0">
-              <span className="text-[9px] uppercase tracking-wider text-muted-foreground truncate">{k}</span>
-              <span className="text-xs font-medium text-foreground truncate" title={String(v)}>{String(v)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* Last Discussion */}
       {lead.lastDiscussion && (
         <div className="flex items-start gap-1.5 mb-2">

@@ -96,9 +96,9 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
           
           {viewMode === 'table' ? (
             <div className="rounded-md border bg-card overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-muted/50 text-muted-foreground">
+              <div className="overflow-x-auto overflow-y-auto max-h-[70vh]">
+                <table className="w-full text-sm text-left relative">
+                  <thead className="bg-muted text-muted-foreground sticky top-0 z-20 shadow-sm">
                     <tr>
                       <th className="px-4 py-3 w-10">
                         <Checkbox 
@@ -151,7 +151,7 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
                                 "flex items-center gap-1 mt-1 text-[10px]",
                                 (lead.websiteUrl.includes('google.com/maps') || lead.websiteUrl.includes('goo.gl/maps')) 
                                   ? "text-primary" 
-                                  : "text-emerald-600"
+                                  : "text-emerald-600 dark:text-emerald-400"
                               )}>
                                 {(lead.websiteUrl.includes('google.com/maps') || lead.websiteUrl.includes('goo.gl/maps')) 
                                   ? <MapPin className="h-2.5 w-2.5" /> 
@@ -161,15 +161,6 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
                                     ? 'View on Maps' 
                                     : 'Website'}
                                 </span>
-                              </div>
-                            )}
-                            {lead.customFields && Object.keys(lead.customFields).length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1.5 max-w-[300px]">
-                                {Object.entries(lead.customFields).map(([k, v]) => (
-                                  <span key={k} className="inline-flex items-center rounded border border-border/50 bg-secondary/50 px-1.5 py-0.5 text-[9px] font-medium text-secondary-foreground truncate max-w-full">
-                                    <span className="opacity-70 mr-1">{k}:</span> {v}
-                                  </span>
-                                ))}
                               </div>
                             )}
                           </td>
