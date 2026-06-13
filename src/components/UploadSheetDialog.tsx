@@ -12,6 +12,7 @@ import { FileSpreadsheet, UploadCloud, Loader2, ArrowRight } from 'lucide-react'
 import { toast } from '@/hooks/useToast';
 import type { CreateLeadInput } from '@/types';
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 
 type Step = 'upload' | 'mapping';
 
@@ -84,90 +85,107 @@ export function UploadSheetDialog() {
     setMapping(newMapping);
   };
 
-  const handleFileSelect = (selectedFile: File) => {
-    if (!selectedFile.name.endsWith('.csv')) {
-      toast({ title: 'Unsupported format', description: 'Please select a .csv file.', variant: 'destructive' });
+  const handleFileSelect = async (selectedFile: File) => {
+    const isCsv = selectedFile.name.toLowerCase().endsWith('.csv');
+    const isExcel = selectedFile.name.toLowerCase().endsWith('.xlsx') || selectedFile.name.toLowerCase().endsWith('.xls');
+
+    if (!isCsv && !isExcel) {
+      toast({ title: 'Unsupported format', description: 'Please select a .csv, .xlsx, or .xls file.', variant: 'destructive' });
       return;
     }
     setFile(selectedFile);
     setIsProcessing(true);
 
-    Papa.parse(selectedFile, {
-      header: false,
-      skipEmptyLines: true,
-      complete: (results) => {
-        if (results.data.length > 0) {
-          const rawRows = results.data as string[][];
-          
-          // Find the header row (the one with the maximum number of non-empty columns)
-          let headerRowIndex = 0;
-          let maxNonEmptyCols = 0;
-          
-          // Only check the first 20 rows to find the header
-          const searchLimit = Math.min(rawRows.length, 20);
-          for (let i = 0; i < searchLimit; i++) {
-            const count = rawRows[i].filter(cell => cell && String(cell).trim() !== '').length;
-            if (count > maxNonEmptyCols) {
-              maxNonEmptyCols = count;
-              headerRowIndex = i;
-            }
-          }
-
-          const rawHeaders = rawRows[headerRowIndex] || [];
-          
-          const seenHeaders = new Set<string>();
-          const validHeaders: string[] = [];
-          const headerMap: Record<number, string> = {}; 
-          
-          rawHeaders.forEach((h, idx) => {
-            let sanitized = String(h || '').trim();
-            if (!sanitized) return; // Skip empty columns
-            
-            // Deduplicate headers
-            let finalHeader = sanitized;
-            let counter = 1;
-            while (seenHeaders.has(finalHeader)) {
-              finalHeader = `${sanitized} (${counter})`;
-              counter++;
-            }
-            
-            seenHeaders.add(finalHeader);
-            validHeaders.push(finalHeader);
-            headerMap[idx] = finalHeader;
-          });
-
-          if (validHeaders.length === 0) {
-            toast({ title: 'Invalid File', description: 'Could not find any valid headers in this CSV.', variant: 'destructive' });
-            setIsProcessing(false);
-            return;
-          }
-
-          // Everything after the header row is data
-          const dataRows = rawRows.slice(headerRowIndex + 1);
-          
-          const mappedData = dataRows.map(row => {
-            const rowObj: any = {};
-            Object.entries(headerMap).forEach(([idxStr, headerName]) => {
-              const idx = parseInt(idxStr, 10);
-              rowObj[headerName] = row[idx] || '';
-            });
-            return rowObj;
-          });
-
-          setCsvHeaders(validHeaders);
-          setCsvData(mappedData);
-          guessMapping(validHeaders);
-          setStep('mapping');
-        } else {
-          toast({ title: 'Invalid File', description: 'Could not find any data in this CSV.', variant: 'destructive' });
+    const processData = (rawRows: any[][]) => {
+      let headerRowIndex = 0;
+      let maxNonEmptyCols = 0;
+      
+      const searchLimit = Math.min(rawRows.length, 20);
+      for (let i = 0; i < searchLimit; i++) {
+        if (!rawRows[i]) continue;
+        const count = rawRows[i].filter(cell => cell && String(cell).trim() !== '').length;
+        if (count > maxNonEmptyCols) {
+          maxNonEmptyCols = count;
+          headerRowIndex = i;
         }
+      }
+
+      const rawHeaders = rawRows[headerRowIndex] || [];
+      
+      const seenHeaders = new Set<string>();
+      const validHeaders: string[] = [];
+      const headerMap: Record<number, string> = {}; 
+      
+      rawHeaders.forEach((h, idx) => {
+        let sanitized = String(h || '').trim();
+        if (!sanitized) return; 
+        
+        let finalHeader = sanitized;
+        let counter = 1;
+        while (seenHeaders.has(finalHeader)) {
+          finalHeader = `${sanitized} (${counter})`;
+          counter++;
+        }
+        
+        seenHeaders.add(finalHeader);
+        validHeaders.push(finalHeader);
+        headerMap[idx] = finalHeader;
+      });
+
+      if (validHeaders.length === 0) {
+        toast({ title: 'Invalid File', description: 'Could not find any valid headers in this file.', variant: 'destructive' });
         setIsProcessing(false);
-      },
-      error: (error) => {
-        toast({ title: 'Parsing Error', description: error.message, variant: 'destructive' });
+        return;
+      }
+
+      const dataRows = rawRows.slice(headerRowIndex + 1);
+      
+      const mappedData = dataRows.map(row => {
+        const rowObj: any = {};
+        Object.entries(headerMap).forEach(([idxStr, headerName]) => {
+          const idx = parseInt(idxStr, 10);
+          rowObj[headerName] = row[idx] || '';
+        });
+        return rowObj;
+      });
+
+      setCsvHeaders(validHeaders);
+      setCsvData(mappedData);
+      guessMapping(validHeaders);
+      setStep('mapping');
+      setIsProcessing(false);
+    };
+
+    if (isExcel) {
+      try {
+        const data = await selectedFile.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rawRows = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1, defval: '' });
+        processData(rawRows);
+      } catch (err) {
+        toast({ title: 'Error reading Excel', description: 'Could not parse the Excel file.', variant: 'destructive' });
         setIsProcessing(false);
       }
-    });
+    } else {
+      Papa.parse(selectedFile, {
+        header: false,
+        skipEmptyLines: true,
+        complete: (results) => {
+          if (results.data.length > 0) {
+            processData(results.data as any[][]);
+          } else {
+            toast({ title: 'Empty File', description: 'The CSV file is empty.', variant: 'destructive' });
+            setIsProcessing(false);
+          }
+        },
+        error: (error) => {
+          toast({ title: 'Parse Error', description: error.message, variant: 'destructive' });
+          setIsProcessing(false);
+        }
+      });
+    }
   };
 
   const handleImport = async () => {
@@ -248,7 +266,7 @@ export function UploadSheetDialog() {
           </DialogTitle>
           <DialogDescription>
             {step === 'upload' 
-              ? 'Import leads from a CSV file. You can map your custom columns in the next step.'
+              ? 'Import leads from an Excel or CSV file. You can map your custom columns in the next step.'
               : `Map the columns from "${file?.name}" to the corresponding Lead fields.`}
           </DialogDescription>
         </DialogHeader>
@@ -261,12 +279,12 @@ export function UploadSheetDialog() {
                 <p className="mb-2 text-sm text-muted-foreground">
                   <span className="font-semibold">Click to upload</span> or drag and drop
                 </p>
-                <p className="text-xs text-muted-foreground">CSV files only</p>
+                <p className="text-xs text-muted-foreground">Excel (.xlsx, .xls) or CSV files</p>
               </div>
               <input 
                 id="dropzone-sheet" 
                 type="file" 
-                accept=".csv" 
+                accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
                 className="hidden" 
                 onChange={(e) => {
                   if (e.target.files?.[0]) handleFileSelect(e.target.files[0]);
@@ -328,7 +346,7 @@ export function UploadSheetDialog() {
                   Import unmapped columns as Custom Fields
                 </label>
                 <p className="text-xs text-muted-foreground">
-                  Any column from your CSV that isn't mapped above will automatically be saved as additional information for the lead.
+                  Any column from your file that isn't mapped above will automatically be saved as additional information for the lead.
                 </p>
               </div>
             </div>
