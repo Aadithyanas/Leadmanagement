@@ -107,11 +107,12 @@ export function LeadCard({ lead, index }: LeadCardProps) {
 
       {/* Custom Fields */}
       {lead.customFields && Object.keys(lead.customFields).length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-2">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2 mb-3 bg-secondary/20 p-2.5 rounded-md border border-border/50">
           {Object.entries(lead.customFields).map(([k, v]) => (
-            <span key={k} className="inline-flex items-center rounded border border-border/50 bg-secondary/30 px-1.5 py-0.5 text-[10px] font-medium text-secondary-foreground">
-              <span className="opacity-70 mr-1">{k}:</span> {v}
-            </span>
+            <div key={k} className="flex flex-col min-w-0">
+              <span className="text-[9px] uppercase tracking-wider text-muted-foreground truncate">{k}</span>
+              <span className="text-xs font-medium text-foreground truncate" title={String(v)}>{String(v)}</span>
+            </div>
           ))}
         </div>
       )}
