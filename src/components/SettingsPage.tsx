@@ -3,20 +3,22 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Compass, Key, Save, Mail, Users, Link as LinkIcon, Copy } from 'lucide-react';
+import { Compass, Key, Save, Mail, Users, Link as LinkIcon, Copy, Moon, Sun, LogOut } from 'lucide-react';
+import { useTheme } from '@/components/ThemeProvider';
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/useToast';
 import { fetchSettings, updateSettings } from '@/services/api';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-export function SettingsPage() {
+export function SettingsPage({ onLogout }: { onLogout?: () => void }) {
+  const { theme, setTheme } = useTheme();
   const { 
     apifyApiKey, setApifyApiKey, 
     notificationEmail, setNotificationEmail,
     enableNotifications, setEnableNotifications
   } = useLeadStore();
-  const { activeOrg } = useAuthStore();
+  const { activeOrg, user } = useAuthStore();
   
   const [keyInput, setKeyInput] = useState(apifyApiKey);
   const [emailInput, setEmailInput] = useState(notificationEmail);
@@ -25,16 +27,19 @@ export function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
 
+  const isAdmin = activeOrg?.role === 'admin' || activeOrg?.role === 'owner';
+
   useEffect(() => {
     fetchSettings().then(settings => {
+      const email = settings.notificationEmail || user?.email || '';
       setApifyApiKey(settings.apifyApiKey);
-      setNotificationEmail(settings.notificationEmail);
+      setNotificationEmail(email);
       setEnableNotifications(settings.enableNotifications);
       setKeyInput(settings.apifyApiKey);
-      setEmailInput(settings.notificationEmail);
+      setEmailInput(email);
       setNotifEnabled(settings.enableNotifications);
     });
-  }, [activeOrg]);
+  }, [activeOrg, user]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -161,10 +166,10 @@ export function SettingsPage() {
               placeholder="your-email@gmail.com" 
               value={emailInput}
               onChange={(e) => setEmailInput(e.target.value)}
-              disabled={!notifEnabled}
+              disabled={!notifEnabled || !isAdmin}
             />
             <p className="text-xs text-muted-foreground">
-              Leads that are "Overdue" will trigger a daily summary email to this address.
+              {isAdmin ? 'Leads that are "Overdue" will trigger a daily summary email to this address.' : 'Only administrators can change the notification email.'}
             </p>
           </div>
 
@@ -187,6 +192,41 @@ export function SettingsPage() {
               <Mail className="h-4 w-4 mr-2" />
               {isTesting ? 'Sending Test...' : 'Send Test Email'}
             </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="border rounded-lg bg-card overflow-hidden">
+        <div className="border-b p-6 bg-muted/20">
+          <h2 className="text-lg font-semibold">Appearance & Account</h2>
+          <p className="text-sm text-muted-foreground">Manage your theme and account session.</p>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="flex items-center justify-between py-2 border-b">
+            <div>
+              <Label className="text-base font-medium">Theme</Label>
+              <p className="text-sm text-muted-foreground">Toggle between light and dark mode</p>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            >
+              {theme === 'dark' ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
+              {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+            </Button>
+          </div>
+          
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <Label className="text-base font-medium text-destructive">Logout</Label>
+              <p className="text-sm text-muted-foreground">End your current session</p>
+            </div>
+            {onLogout && (
+              <Button variant="destructive" onClick={onLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            )}
           </div>
         </div>
       </div>

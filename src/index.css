@@ -4,27 +4,57 @@
 @tailwind utilities;
 @layer base {
   :root {
-    /* Minimalist Green/Black Background/Foreground */
+    /* Light Mode */
+    --background: 142 20% 98%;
+    --foreground: 0 0% 10%;
+    
+    --primary: 142 71% 45%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 142 10% 90%;
+    --secondary-foreground: 0 0% 10%;
+    
+    --muted: 142 10% 90%;
+    --muted-foreground: 0 0% 40%;
+    
+    --accent: 142 71% 45%;
+    --accent-foreground: 0 0% 100%;
+    
+    --border: 142 10% 85%;
+    --input: 142 10% 85%;
+    --ring: 142 71% 45%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --radius: 0.5rem;
+    
+    --font-display: 'Inter', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --shadow-dashboard: 0 25px 80px -12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  }
+
+  .dark {
     --background: 0 0% 0%;
     --foreground: 0 0% 100%;
     
-    /* Neon/Emerald Green Primary */
     --primary: 142 71% 45%;
     --primary-foreground: 0 0% 0%;
     
-    /* Dark minimal secondary */
     --secondary: 0 0% 10%;
     --secondary-foreground: 0 0% 100%;
     
-    /* Muted tones */
     --muted: 0 0% 15%;
     --muted-foreground: 0 0% 60%;
     
-    /* Accent */
     --accent: 142 71% 45%;
     --accent-foreground: 0 0% 0%;
     
-    /* Borders */
     --border: 0 0% 15%;
     --input: 0 0% 15%;
     --ring: 142 71% 45%;
@@ -36,14 +66,6 @@
     
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    
-    /* Modern minimal radius */
-    --radius: 0.5rem;
-    
-    /* Use Inter for everything in Swiss style */
-    --font-display: 'Inter', sans-serif;
-    --font-body: 'Inter', sans-serif;
-    --shadow-dashboard: 0 25px 80px -12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.06);
   }
 }
 
@@ -53,6 +75,10 @@
   }
   body {
     @apply text-foreground font-sans antialiased min-h-screen;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+    background-attachment: fixed;
+  }
+  .dark body {
     background: linear-gradient(135deg, #022c22 0%, #000000 100%);
     background-attachment: fixed;
   }

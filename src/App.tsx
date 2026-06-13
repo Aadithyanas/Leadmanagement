@@ -22,6 +22,7 @@ import { UploadSheetDialog } from '@/components/UploadSheetDialog';
 import { ConnectApifyDialog } from '@/components/ConnectApifyDialog';
 import { InviteAcceptScreen } from '@/components/InviteAcceptScreen';
 import { supabase } from '@/lib/supabase';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -65,7 +66,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
               {activeTab === 'rejected' && <LeadsPage isRejectedView />}
               {activeTab === 'discover' && <DiscoverPage />}
               {activeTab === 'profile' && <ProfilePage />}
-              {activeTab === 'settings' && <SettingsPage />}
+              {activeTab === 'settings' && <SettingsPage onLogout={onLogout} />}
             </motion.div>
           </AnimatePresence>
         </main>
@@ -125,7 +126,8 @@ export default function App() {
     });
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
     setShowLanding(true);
     queryClient.clear();
@@ -153,13 +155,15 @@ export default function App() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {user && activeOrg ? (
-        <AppLayout onLogout={handleLogout} />
-      ) : (
-        <AuthScreen onComplete={() => setShowLanding(false)} />
-      )}
-      <Toaster />
-    </QueryClientProvider>
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <QueryClientProvider client={queryClient}>
+        {user && activeOrg ? (
+          <AppLayout onLogout={handleLogout} />
+        ) : (
+          <AuthScreen onComplete={() => setShowLanding(false)} />
+        )}
+        <Toaster />
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
