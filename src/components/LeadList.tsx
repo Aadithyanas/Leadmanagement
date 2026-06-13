@@ -50,16 +50,13 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
     );
   }
 
-  const isPlaylistSpecific = !isRejectedView && sourceCategoryFilter !== 'All';
   const customFieldKeys = new Set<string>();
-  if (isPlaylistSpecific && filtered.length > 0) {
-    filtered.forEach(lead => {
-      if (lead.customFields) {
-        Object.keys(lead.customFields).forEach(k => customFieldKeys.add(k));
-      }
-    });
-  }
-  const dynamicColumns = Array.from(customFieldKeys);
+  filtered.forEach(lead => {
+    if (lead.customFields && typeof lead.customFields === 'object') {
+      Object.keys(lead.customFields).forEach(k => customFieldKeys.add(k));
+    }
+  });
+  const dynamicColumns = Array.from(customFieldKeys).sort();
 
   // Partition: today follow-ups, overdue, rest
   const todayLeads: Lead[] = [];
@@ -118,7 +115,7 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
                       <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Industry</th>
                       <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Contact</th>
                       <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Status</th>
-                      {isPlaylistSpecific && dynamicColumns.map(col => (
+                      {dynamicColumns.map(col => (
                         <th key={col} className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap text-amber-500/80">
                           {col}
                         </th>
@@ -197,9 +194,11 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
                               {lead.status}
                             </span>
                           </td>
-                          {isPlaylistSpecific && dynamicColumns.map(col => (
-                            <td key={col} className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap max-w-[250px] truncate" title={lead.customFields?.[col] || ''}>
-                              {lead.customFields?.[col] || '-'}
+                          {dynamicColumns.map(col => (
+                            <td key={col} className="px-4 py-3 whitespace-nowrap">
+                              <span className="text-sm text-muted-foreground">
+                                {lead.customFields?.[col] ? String(lead.customFields[col]) : '-'}
+                              </span>
                             </td>
                           ))}
                         </tr>
