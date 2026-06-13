@@ -34,7 +34,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-background flex-col lg:flex-row">
+    <div className="flex min-h-screen bg-transparent flex-col lg:flex-row">
       <Sidebar onLogout={onLogout} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       
       <div className="flex-1 flex flex-col min-h-screen">
@@ -62,6 +62,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
             >
               {activeTab === 'dashboard' && <DashboardOverview />}
               {activeTab === 'leads' && <LeadsPage />}
+              {activeTab === 'rejected' && <LeadsPage isRejectedView />}
               {activeTab === 'discover' && <DiscoverPage />}
               {activeTab === 'profile' && <ProfilePage />}
               {activeTab === 'settings' && <SettingsPage />}

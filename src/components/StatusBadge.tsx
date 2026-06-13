@@ -1,13 +1,14 @@
 import { Badge } from '@/components/ui/badge';
 import type { LeadStatus } from '@/types';
 
-const statusVariantMap: Record<LeadStatus, 'new' | 'contacted' | 'qualified' | 'proposal' | 'won' | 'lost'> = {
+const statusVariantMap: Record<LeadStatus, 'new' | 'contacted' | 'qualified' | 'proposal' | 'won' | 'lost' | 'rejected'> = {
   New: 'new',
   Contacted: 'contacted',
   Qualified: 'qualified',
   'Proposal Sent': 'proposal',
   Won: 'won',
   Lost: 'lost',
+  Rejected: 'rejected',
 };
 
 interface StatusBadgeProps {

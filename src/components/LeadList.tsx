@@ -7,7 +7,7 @@ import type { Lead } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 
-export function LeadList() {
+export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
   const { data: leads, isLoading } = useFilteredLeads();
   const { data: members } = useOrgMembers();
   const { searchQuery, statusFilter, viewMode, openTimeline, selectedLeadIds, toggleLeadSelection, setSelectedLeadIds } = useLeadStore();
@@ -32,8 +32,13 @@ export function LeadList() {
 
   // Filter
   let filtered = leads;
-  if (statusFilter !== 'All') {
-    filtered = filtered.filter((l) => l.status === statusFilter);
+  if (isRejectedView) {
+    filtered = filtered.filter((l) => l.status === 'Rejected');
+  } else {
+    filtered = filtered.filter((l) => l.status !== 'Rejected');
+    if (statusFilter !== 'All') {
+      filtered = filtered.filter((l) => l.status === statusFilter);
+    }
   }
   if (searchQuery.trim()) {
     const q = searchQuery.toLowerCase();
@@ -142,6 +147,15 @@ export function LeadList() {
                                 </span>
                               </div>
                             )}
+                            {lead.customFields && Object.keys(lead.customFields).length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1.5">
+                                {Object.entries(lead.customFields).map(([k, v]) => (
+                                  <span key={k} className="inline-flex items-center rounded border border-border/50 bg-secondary/50 px-1.5 py-0.5 text-[9px] font-medium text-secondary-foreground">
+                                    <span className="opacity-70 mr-1">{k}:</span> {v}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </td>
                           <td className="px-4 py-3">
                             {lead.assignedTo ? (
@@ -170,6 +184,7 @@ export function LeadList() {
                               lead.status === 'Qualified' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' :
                               lead.status === 'Proposal Sent' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' :
                               lead.status === 'Won' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                              lead.status === 'Rejected' ? 'bg-stone-100 text-stone-800 dark:bg-stone-900/30 dark:text-stone-300' :
                               'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
                             }`}>
                               {lead.status}

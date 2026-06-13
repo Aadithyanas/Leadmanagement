@@ -105,6 +105,17 @@ export function LeadCard({ lead, index }: LeadCardProps) {
         )}
       </div>
 
+      {/* Custom Fields */}
+      {lead.customFields && Object.keys(lead.customFields).length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {Object.entries(lead.customFields).map(([k, v]) => (
+            <span key={k} className="inline-flex items-center rounded border border-border/50 bg-secondary/30 px-1.5 py-0.5 text-[10px] font-medium text-secondary-foreground">
+              <span className="opacity-70 mr-1">{k}:</span> {v}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Last Discussion */}
       {lead.lastDiscussion && (
         <div className="flex items-start gap-1.5 mb-2">

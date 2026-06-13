@@ -19,7 +19,7 @@ import { Loader2, Send, Calendar, MessageCircle, Phone, Mail, Building2, Globe, 
 import { motion, AnimatePresence } from 'framer-motion';
 import type { LeadStatus, Lead } from '@/types';
 
-const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost'];
+const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost', 'Rejected'];
 
 export function LeadTimelineDialog() {
   const { isTimelineOpen, closeTimeline, selectedLeadId, openEditLead } = useLeadStore();

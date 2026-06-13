@@ -69,13 +69,16 @@ export function DashboardOverview() {
     { name: 'Other', value: leads.filter(l => !['Technology', 'Retail', 'Healthcare', 'Food & Beverage', 'Restaurant'].includes(l.industry)).length },
   ].filter(i => i.value > 0) : [];
 
-  const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+  const COLORS = ['#22c55e', '#16a34a', '#15803d', '#166534', '#14532d'];
 
   const statusData = leads ? [
     { name: 'New', count: leads.filter(l => l.status === 'New').length },
     { name: 'Contacted', count: leads.filter(l => l.status === 'Contacted').length },
     { name: 'Qualified', count: leads.filter(l => l.status === 'Qualified').length },
+    { name: 'Proposal', count: leads.filter(l => l.status === 'Proposal Sent').length },
     { name: 'Won', count: leads.filter(l => l.status === 'Won').length },
+    { name: 'Lost', count: leads.filter(l => l.status === 'Lost').length },
+    { name: 'Rejected', count: leads.filter(l => l.status === 'Rejected').length },
   ] : [];
 
   const conversionRate = leads?.length ? Math.round((leads.filter(l => l.status === 'Won').length / leads.length) * 100) : 0;
@@ -136,24 +139,24 @@ export function DashboardOverview() {
       <DashboardStats />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-violet-500/10 to-indigo-500/10 border-violet-500/20">
+        <Card className="bg-gradient-to-br from-primary/10 to-emerald-900/20 border-primary/20">
           <CardHeader className="pb-2">
-            <CardDescription className="text-violet-600 font-medium flex items-center gap-1">
+            <CardDescription className="text-primary font-medium flex items-center gap-1">
               <Target className="h-3 w-3" /> Conversion Rate
             </CardDescription>
             <CardTitle className="text-3xl font-bold">{conversionRate}%</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-xs text-muted-foreground flex items-center gap-1">
-              <TrendingUp className="h-3 w-3 text-emerald-500" />
-              <span className="text-emerald-500 font-medium">+2.5%</span> from last week
+              <TrendingUp className="h-3 w-3 text-primary" />
+              <span className="text-primary font-medium">+2.5%</span> from last week
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-500/20">
+        <Card className="bg-gradient-to-br from-green-500/10 to-green-900/20 border-green-500/20">
           <CardHeader className="pb-2">
-            <CardDescription className="text-blue-600 font-medium flex items-center gap-1">
+            <CardDescription className="text-green-500 font-medium flex items-center gap-1">
               <Globe className="h-3 w-3" /> Market Reach
             </CardDescription>
             <CardTitle className="text-3xl font-bold">{industryData.length}</CardTitle>
@@ -163,9 +166,9 @@ export function DashboardOverview() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-emerald-500/20">
+        <Card className="bg-gradient-to-br from-emerald-600/10 to-emerald-950/20 border-emerald-600/20">
           <CardHeader className="pb-2">
-            <CardDescription className="text-emerald-600 font-medium flex items-center gap-1">
+            <CardDescription className="text-emerald-500 font-medium flex items-center gap-1">
               <Activity className="h-3 w-3" /> Avg Engagement
             </CardDescription>
             <CardTitle className="text-3xl font-bold">{avgEngagement}</CardTitle>
@@ -175,9 +178,9 @@ export function DashboardOverview() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/20">
+        <Card className="bg-gradient-to-br from-teal-500/10 to-teal-900/20 border-teal-500/20">
           <CardHeader className="pb-2">
-            <CardDescription className="text-amber-600 font-medium flex items-center gap-1">
+            <CardDescription className="text-teal-500 font-medium flex items-center gap-1">
               <Filter className="h-3 w-3" /> Funnel Efficiency
             </CardDescription>
             <CardTitle className="text-3xl font-bold">{funnelEfficiency}%</CardTitle>
@@ -196,7 +199,7 @@ export function DashboardOverview() {
                 <CardTitle>Lead Flow Analytics</CardTitle>
                 <CardDescription>Visualizing discovery vs. engagement trends</CardDescription>
               </div>
-              <Badge variant="outline" className="bg-violet-50 text-violet-700 border-violet-200">Last 7 Days</Badge>
+              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">Last 7 Days</Badge>
             </div>
           </CardHeader>
           <CardContent className="h-[350px] pt-4">
@@ -204,12 +207,12 @@ export function DashboardOverview() {
               <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorAcquired" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
                   </linearGradient>
                   <linearGradient id="colorContacted" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#15803d" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#15803d" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
@@ -218,8 +221,8 @@ export function DashboardOverview() {
                 <Tooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }}
                 />
-                <Area type="monotone" dataKey="acquired" name="New Found" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorAcquired)" />
-                <Area type="monotone" dataKey="contacted" name="Engaged" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorContacted)" />
+                <Area type="monotone" dataKey="acquired" name="New Found" stroke="#22c55e" strokeWidth={3} fillOpacity={1} fill="url(#colorAcquired)" />
+                <Area type="monotone" dataKey="contacted" name="Engaged" stroke="#15803d" strokeWidth={3} fillOpacity={1} fill="url(#colorContacted)" />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }} />
               </AreaChart>
             </ResponsiveContainer>
@@ -278,7 +281,7 @@ export function DashboardOverview() {
                 <XAxis type="number" hide />
                 <YAxis dataKey="name" type="category" fontSize={11} axisLine={false} tickLine={false} />
                 <Tooltip cursor={{ fill: 'transparent' }} />
-                <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
+                <Bar dataKey="count" fill="#22c55e" radius={[0, 4, 4, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

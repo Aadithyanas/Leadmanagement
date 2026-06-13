@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Compass, Settings, LogOut, Zap, User } from 'lucide-react';
+import { LayoutDashboard, Users, Compass, Settings, LogOut, Zap, User, UserX } from 'lucide-react';
 import { useLeadStore } from '@/store/useLeadStore';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ export function Sidebar({ onLogout, isOpen, onClose }: SidebarProps) {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'leads', label: 'Leads', icon: Users },
+    { id: 'rejected', label: 'Rejected Leads', icon: UserX },
     { id: 'discover', label: 'Discover Leads', icon: Compass },
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -45,7 +46,7 @@ export function Sidebar({ onLogout, isOpen, onClose }: SidebarProps) {
       </AnimatePresence>
 
       <aside className={cn(
-        "fixed lg:sticky top-0 left-0 z-50 w-64 border-r bg-card flex flex-col h-screen transition-transform duration-300 lg:translate-x-0 shadow-xl lg:shadow-none",
+        "fixed lg:sticky top-0 left-0 z-50 w-64 border-r border-r-white/5 bg-black/20 backdrop-blur-md flex flex-col h-screen transition-transform duration-300 lg:translate-x-0 shadow-xl lg:shadow-none",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="p-6 flex items-center justify-between">

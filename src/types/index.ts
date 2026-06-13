@@ -4,7 +4,8 @@ export type LeadStatus =
   | 'Qualified'
   | 'Proposal Sent'
   | 'Won'
-  | 'Lost';
+  | 'Lost'
+  | 'Rejected';
 
 export type Industry =
   | 'Restaurant'

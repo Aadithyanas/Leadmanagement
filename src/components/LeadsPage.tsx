@@ -20,7 +20,7 @@ const ALL_STATUSES: (LeadStatus | 'All')[] = [
   'All', 'New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost',
 ];
 
-export function LeadsPage() {
+export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
   const {
     searchQuery, setSearchQuery,
     statusFilter, setStatusFilter,
@@ -54,8 +54,12 @@ export function LeadsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Leads Pipeline</h1>
-          <p className="text-muted-foreground">Manage, track, and convert your business prospects.</p>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">
+            {isRejectedView ? 'Rejected Leads' : 'Leads Pipeline'}
+          </h1>
+          <p className="text-muted-foreground">
+            {isRejectedView ? 'Review leads that were unresponsive or disqualified.' : 'Manage, track, and convert your business prospects.'}
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -145,19 +149,21 @@ export function LeadsPage() {
 
         <div className="flex items-center gap-3 w-full sm:w-auto px-2">
           {/* Status Filter */}
-          <Select
-            value={statusFilter}
-            onValueChange={(v) => setStatusFilter(v as LeadStatus | 'All')}
-          >
-            <SelectTrigger id="filter-status" className="w-[140px] border-none bg-transparent hover:bg-muted/50 focus:ring-0">
-              <SelectValue placeholder="Filter" />
-            </SelectTrigger>
-            <SelectContent>
-              {ALL_STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {!isRejectedView && (
+            <Select
+              value={statusFilter}
+              onValueChange={(v) => setStatusFilter(v as LeadStatus | 'All')}
+            >
+              <SelectTrigger id="filter-status" className="w-[140px] border-none bg-transparent hover:bg-muted/50 focus:ring-0">
+                <SelectValue placeholder="Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                {ALL_STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           {/* View Toggle */}
           <div className="flex items-center rounded-md border p-1 bg-secondary/50 shrink-0">
@@ -183,7 +189,7 @@ export function LeadsPage() {
         </div>
       </div>
 
-      <LeadList />
+      <LeadList isRejectedView={isRejectedView} />
 
       {/* Floating Bulk Actions Bar */}
       <AnimatePresence>

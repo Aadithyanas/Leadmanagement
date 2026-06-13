@@ -49,6 +49,8 @@ export default {
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
+        display: "var(--font-display)",
+        body: "var(--font-body)",
       },
       keyframes: {
         "accordion-down": {
