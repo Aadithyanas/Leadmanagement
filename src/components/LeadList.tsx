@@ -44,9 +44,9 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
     const q = searchQuery.toLowerCase();
     filtered = filtered.filter(
       (l) =>
-        l.name.toLowerCase().includes(q) ||
-        l.company.toLowerCase().includes(q) ||
-        l.email.toLowerCase().includes(q)
+        (l.name || '').toLowerCase().includes(q) ||
+        (l.company || '').toLowerCase().includes(q) ||
+        (l.email || '').toLowerCase().includes(q)
     );
   }
 
@@ -146,7 +146,7 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
                           <td className="px-4 py-3">
                             <div className="font-medium whitespace-nowrap">{lead.name}</div>
                             {lead.company && <div className="text-xs text-muted-foreground whitespace-nowrap">{lead.company}</div>}
-                            {lead.websiteUrl && (
+                            {lead.websiteUrl && typeof lead.websiteUrl === 'string' && (
                               <div className={cn(
                                 "flex items-center gap-1 mt-1 text-[10px]",
                                 (lead.websiteUrl.includes('google.com/maps') || lead.websiteUrl.includes('goo.gl/maps')) 
