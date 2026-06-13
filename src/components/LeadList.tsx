@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
   const { data: leads, isLoading } = useFilteredLeads();
   const { data: members } = useOrgMembers();
-  const { searchQuery, statusFilter, viewMode, openTimeline, selectedLeadIds, toggleLeadSelection, setSelectedLeadIds } = useLeadStore();
+  const { searchQuery, statusFilter, sourceCategoryFilter, viewMode, openTimeline, selectedLeadIds, toggleLeadSelection, setSelectedLeadIds } = useLeadStore();
 
   if (isLoading) {
     return (
@@ -49,6 +49,17 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
         l.email.toLowerCase().includes(q)
     );
   }
+
+  const isPlaylistSpecific = !isRejectedView && sourceCategoryFilter !== 'All';
+  const customFieldKeys = new Set<string>();
+  if (isPlaylistSpecific && filtered.length > 0) {
+    filtered.forEach(lead => {
+      if (lead.customFields) {
+        Object.keys(lead.customFields).forEach(k => customFieldKeys.add(k));
+      }
+    });
+  }
+  const dynamicColumns = Array.from(customFieldKeys);
 
   // Partition: today follow-ups, overdue, rest
   const todayLeads: Lead[] = [];
@@ -102,11 +113,16 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
                           }}
                         />
                       </th>
-                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Name / Company</th>
-                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Assigned</th>
-                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Industry</th>
-                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Contact</th>
-                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Name / Company</th>
+                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Assigned</th>
+                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Industry</th>
+                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Contact</th>
+                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Status</th>
+                      {isPlaylistSpecific && dynamicColumns.map(col => (
+                        <th key={col} className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap text-amber-500/80">
+                          {col}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -128,8 +144,8 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
                             />
                           </td>
                           <td className="px-4 py-3">
-                            <div className="font-medium">{lead.name}</div>
-                            {lead.company && <div className="text-xs text-muted-foreground">{lead.company}</div>}
+                            <div className="font-medium whitespace-nowrap">{lead.name}</div>
+                            {lead.company && <div className="text-xs text-muted-foreground whitespace-nowrap">{lead.company}</div>}
                             {lead.websiteUrl && (
                               <div className={cn(
                                 "flex items-center gap-1 mt-1 text-[10px]",
@@ -147,17 +163,17 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
                                 </span>
                               </div>
                             )}
-                            {lead.customFields && Object.keys(lead.customFields).length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1.5">
+                            {!isPlaylistSpecific && lead.customFields && Object.keys(lead.customFields).length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1.5 max-w-[300px]">
                                 {Object.entries(lead.customFields).map(([k, v]) => (
-                                  <span key={k} className="inline-flex items-center rounded border border-border/50 bg-secondary/50 px-1.5 py-0.5 text-[9px] font-medium text-secondary-foreground">
+                                  <span key={k} className="inline-flex items-center rounded border border-border/50 bg-secondary/50 px-1.5 py-0.5 text-[9px] font-medium text-secondary-foreground truncate max-w-full">
                                     <span className="opacity-70 mr-1">{k}:</span> {v}
                                   </span>
                                 ))}
                               </div>
                             )}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             {lead.assignedTo ? (
                               <span className="inline-flex items-center rounded-md bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300">
                                 {assignee ? (assignee.name || assignee.email) : 'Assigned'}
@@ -166,18 +182,18 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
                               <span className="text-xs text-muted-foreground">Unassigned</span>
                             )}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 whitespace-nowrap">
                              {lead.industry && (
                               <span className="inline-flex items-center rounded-md bg-violet-50 dark:bg-violet-950/30 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300">
                                 {lead.industry}
                               </span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-xs">
+                          <td className="px-4 py-3 text-xs whitespace-nowrap">
                             {lead.email && <div>{lead.email}</div>}
                             {lead.phone && <div className="text-muted-foreground">{lead.phone}</div>}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                               lead.status === 'New' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
                               lead.status === 'Contacted' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
@@ -190,6 +206,11 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
                               {lead.status}
                             </span>
                           </td>
+                          {isPlaylistSpecific && dynamicColumns.map(col => (
+                            <td key={col} className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap max-w-[250px] truncate" title={lead.customFields?.[col] || ''}>
+                              {lead.customFields?.[col] || '-'}
+                            </td>
+                          ))}
                         </tr>
                       );
                     })}

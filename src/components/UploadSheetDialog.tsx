@@ -65,8 +65,8 @@ export function UploadSheetDialog() {
         if (h === fieldKey) return true;
         
         switch(fieldKey) {
-          case 'name': return h.includes('name') && !h.includes('college') && !h.includes('company');
-          case 'company': return h.includes('company') || h.includes('business') || h.includes('college') || h.includes('organization');
+          case 'name': return h.includes('name') && !h.includes('college') && !h.includes('company') && !h.includes('school');
+          case 'company': return h.includes('company') || h.includes('business') || h.includes('college') || h.includes('organization') || h.includes('school');
           case 'email': return h.includes('email') || h.includes('e-mail');
           case 'phone': return h.includes('phone') || h.includes('number') || h.includes('contact');
           case 'industry': return h.includes('industry') || h.includes('interest') || h.includes('category');
@@ -93,18 +93,73 @@ export function UploadSheetDialog() {
     setIsProcessing(true);
 
     Papa.parse(selectedFile, {
-      header: true,
+      header: false,
       skipEmptyLines: true,
       complete: (results) => {
-        if (results.meta.fields && results.data.length > 0) {
-          // Filter out empty headers and remove duplicates to prevent Radix UI crashes
-          const validHeaders = Array.from(new Set(results.meta.fields.filter(h => h && h.trim() !== '')));
+        if (results.data.length > 0) {
+          const rawRows = results.data as string[][];
+          
+          // Find the header row (the one with the maximum number of non-empty columns)
+          let headerRowIndex = 0;
+          let maxNonEmptyCols = 0;
+          
+          // Only check the first 20 rows to find the header
+          const searchLimit = Math.min(rawRows.length, 20);
+          for (let i = 0; i < searchLimit; i++) {
+            const count = rawRows[i].filter(cell => cell && String(cell).trim() !== '').length;
+            if (count > maxNonEmptyCols) {
+              maxNonEmptyCols = count;
+              headerRowIndex = i;
+            }
+          }
+
+          const rawHeaders = rawRows[headerRowIndex] || [];
+          
+          const seenHeaders = new Set<string>();
+          const validHeaders: string[] = [];
+          const headerMap: Record<number, string> = {}; 
+          
+          rawHeaders.forEach((h, idx) => {
+            let sanitized = String(h || '').trim();
+            if (!sanitized) return; // Skip empty columns
+            
+            // Deduplicate headers
+            let finalHeader = sanitized;
+            let counter = 1;
+            while (seenHeaders.has(finalHeader)) {
+              finalHeader = `${sanitized} (${counter})`;
+              counter++;
+            }
+            
+            seenHeaders.add(finalHeader);
+            validHeaders.push(finalHeader);
+            headerMap[idx] = finalHeader;
+          });
+
+          if (validHeaders.length === 0) {
+            toast({ title: 'Invalid File', description: 'Could not find any valid headers in this CSV.', variant: 'destructive' });
+            setIsProcessing(false);
+            return;
+          }
+
+          // Everything after the header row is data
+          const dataRows = rawRows.slice(headerRowIndex + 1);
+          
+          const mappedData = dataRows.map(row => {
+            const rowObj: any = {};
+            Object.entries(headerMap).forEach(([idxStr, headerName]) => {
+              const idx = parseInt(idxStr, 10);
+              rowObj[headerName] = row[idx] || '';
+            });
+            return rowObj;
+          });
+
           setCsvHeaders(validHeaders);
-          setCsvData(results.data);
+          setCsvData(mappedData);
           guessMapping(validHeaders);
           setStep('mapping');
         } else {
-          toast({ title: 'Invalid File', description: 'Could not find any data or headers in this CSV.', variant: 'destructive' });
+          toast({ title: 'Invalid File', description: 'Could not find any data in this CSV.', variant: 'destructive' });
         }
         setIsProcessing(false);
       },
