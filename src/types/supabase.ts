@@ -74,6 +74,7 @@ export type Database = {
           updated_at: string | null
           website_url: string | null
           assigned_to: string | null
+          source_category: string | null
           custom_fields: Json | null
         }
         Insert: {
@@ -93,6 +94,7 @@ export type Database = {
           updated_at?: string | null
           website_url?: string | null
           assigned_to?: string | null
+          source_category?: string | null
           custom_fields?: Json | null
         }
         Update: {
@@ -112,6 +114,7 @@ export type Database = {
           updated_at?: string | null
           website_url?: string | null
           assigned_to?: string | null
+          source_category?: string | null
           custom_fields?: Json | null
         }
         Relationships: [
