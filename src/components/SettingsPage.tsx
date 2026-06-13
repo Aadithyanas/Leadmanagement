@@ -8,6 +8,7 @@ import { useTheme } from '@/components/ThemeProvider';
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/useToast';
 import { fetchSettings, updateSettings } from '@/services/api';
+import { usePWAInstall } from '@/hooks/usePWAInstall';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -23,6 +24,7 @@ export function SettingsPage({ onLogout }: { onLogout?: () => void }) {
   const [keyInput, setKeyInput] = useState(apifyApiKey);
   const [emailInput, setEmailInput] = useState(notificationEmail);
   const [notifEnabled, setNotifEnabled] = useState(enableNotifications);
+  const { isInstallable, installPWA } = usePWAInstall();
   
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -195,6 +197,24 @@ export function SettingsPage({ onLogout }: { onLogout?: () => void }) {
           </div>
         </div>
       </div>
+      {isInstallable && (
+        <div className="border rounded-lg bg-card overflow-hidden">
+          <div className="border-b p-6 bg-muted/20">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-smartphone"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+              Install Application
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Add LeadFlow to your device's home screen for quick access.
+            </p>
+          </div>
+          <div className="p-6">
+            <Button onClick={installPWA} variant="default" className="w-full sm:w-auto">
+              Add Shortcut to Home Screen
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="border rounded-lg bg-card overflow-hidden">
         <div className="border-b p-6 bg-muted/20">
