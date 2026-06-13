@@ -138,7 +138,10 @@ export function UploadSheetDialog() {
         return;
       }
 
-      const dataRows = rawRows.slice(headerRowIndex + 1);
+      const dataRows = rawRows.slice(headerRowIndex + 1).filter(row => {
+        if (!row || !Array.isArray(row)) return false;
+        return row.some(cell => cell !== undefined && cell !== null && String(cell).trim() !== '');
+      });
       
       const mappedData = dataRows.map(row => {
         const rowObj: any = {};
