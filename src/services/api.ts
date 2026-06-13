@@ -115,6 +115,16 @@ export async function updateOrgMemberRole(memberId: string, role: string): Promi
   if (error) throw error;
 }
 
+export async function removeOrgMember(memberId: string): Promise<void> {
+  const { error } = await supabase
+    .from('organization_members')
+    .delete()
+    .eq('user_id', memberId)
+    .eq('org_id', getOrgId());
+    
+  if (error) throw error;
+}
+
 export async function fetchTeams(): Promise<Team[]> {
   const orgId = getOrgId();
   const { data, error } = await supabase
@@ -442,10 +452,3 @@ export async function createLeadsBulk(leads: CreateLeadInput[]): Promise<{ messa
   return { message: 'Success', count: leads.length };
 }
 
-export async function seedMyData(): Promise<{ message: string; count: number }> {
-  return { message: 'Seed not configured for Supabase directly yet', count: 0 };
-}
-
-export function seedDemoData(): void {
-  console.log('Seed demo data using createLeadsBulk directly in UI for now.');
-}

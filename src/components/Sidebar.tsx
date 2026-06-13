@@ -83,12 +83,6 @@ export function Sidebar({ onLogout, isOpen, onClose }: SidebarProps) {
 
         <div className="p-4 mt-auto border-t space-y-4">
           <ServerStatus />
-          {onLogout && (
-            <Button variant="ghost" className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground" onClick={onLogout}>
-              <LogOut className="h-4 w-4" />
-              Logout
-            </Button>
-          )}
         </div>
       </aside>
     </>

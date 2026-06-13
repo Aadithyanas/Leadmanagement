@@ -103,7 +103,7 @@ export function AuthScreen({ onComplete }: AuthScreenProps) {
           email: form.email,
           password: form.password,
           options: {
-            data: { name: form.name },
+            data: { full_name: form.name },
             emailRedirectTo: window.location.origin
           }
         });

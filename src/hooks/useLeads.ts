@@ -13,7 +13,8 @@ import {
   createTeam,
   createInvitation,
   updateOrgMemberTeam,
-  updateOrgMemberRole
+  updateOrgMemberRole,
+  removeOrgMember
 } from '@/services/api';
 import type {
   CreateLeadInput,
@@ -70,6 +71,16 @@ export function useUpdateMemberRole() {
   return useMutation({
     mutationFn: ({ memberId, role }: { memberId: string; role: string }) => 
       updateOrgMemberRole(memberId, role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orgMembers'] });
+    },
+  });
+}
+
+export function useRemoveMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (memberId: string) => removeOrgMember(memberId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orgMembers'] });
     },

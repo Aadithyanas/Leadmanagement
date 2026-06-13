@@ -2,11 +2,11 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Users, Mail, Copy, Building } from 'lucide-react';
+import { Users, Mail, Copy, Building, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from '@/hooks/useToast';
 import { fetchOrgMembers, OrgMember } from '@/services/api';
-import { useTeams, useCreateTeam, useCreateInvitation, useUpdateMemberTeam, useUpdateMemberRole } from '@/hooks/useLeads';
+import { useTeams, useCreateTeam, useCreateInvitation, useUpdateMemberTeam, useUpdateMemberRole, useRemoveMember } from '@/hooks/useLeads';
 import { supabase } from '@/lib/supabase';
 
 export function ProfilePage() {
@@ -17,12 +17,40 @@ export function ProfilePage() {
   const [inviteTeamId, setInviteTeamId] = useState<string>('none');
   const [inviteLink, setInviteLink] = useState('');
   const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
+
+  const [profileName, setProfileName] = useState(user?.user_metadata?.full_name || '');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  useEffect(() => {
+    if (user?.user_metadata?.full_name) {
+      setProfileName(user.user_metadata.full_name);
+    }
+  }, [user]);
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setIsSavingProfile(true);
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        data: { full_name: profileName }
+      });
+      if (error) throw error;
+      
+      useAuthStore.getState().setUser(data.user);
+      toast({ title: 'Profile Updated', description: 'Your personal details have been saved.', variant: 'success' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
   
   const { data: teams } = useTeams();
   const createTeam = useCreateTeam();
   const createInvitation = useCreateInvitation();
   const updateMemberTeam = useUpdateMemberTeam();
   const updateMemberRole = useUpdateMemberRole();
+  const removeMember = useRemoveMember();
   
   const [newTeamName, setNewTeamName] = useState('');
   const [isCreatingTeam, setIsCreatingTeam] = useState(false);
@@ -126,11 +154,55 @@ export function ProfilePage() {
     }
   };
 
+  const handleRemoveMember = async (memberId: string) => {
+    if (!confirm('Are you sure you want to remove this member?')) return;
+    try {
+      await removeMember.mutateAsync(memberId);
+      toast({ title: 'Removed', description: 'Member removed successfully.', variant: 'success' });
+      setMembers(members.filter(m => m.id !== memberId));
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  };
+
   return (
     <div className="max-w-3xl space-y-8 pb-12">
       <div>
         <h1 className="text-3xl font-bold tracking-tight mb-2">Profile & Organization</h1>
         <p className="text-muted-foreground">Manage your personal profile and organization settings.</p>
+      </div>
+
+      <div className="border rounded-lg bg-card overflow-hidden mb-8">
+        <div className="border-b p-6 bg-muted/20">
+          <div className="flex items-center gap-3 mb-1">
+            <User className="h-5 w-5 text-emerald-500" />
+            <h2 className="text-lg font-semibold">Personal Profile</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">Update your personal information.</p>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-xl">
+            <div className="space-y-2">
+              <Label>Full Name</Label>
+              <Input 
+                value={profileName} 
+                onChange={(e) => setProfileName(e.target.value)} 
+                placeholder="e.g. John Doe" 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input 
+                value={user?.email || ''} 
+                disabled 
+                className="bg-muted text-muted-foreground"
+              />
+            </div>
+          </div>
+          <Button onClick={handleSaveProfile} disabled={isSavingProfile || !profileName.trim()}>
+            {isSavingProfile ? 'Saving...' : 'Save Profile'}
+          </Button>
+        </div>
       </div>
 
       <div className="border rounded-lg bg-card overflow-hidden">
@@ -290,6 +362,17 @@ export function ProfilePage() {
                           <div className="px-2 py-1 bg-muted/50 rounded text-xs font-medium uppercase tracking-wider text-foreground border">
                             {member.role}
                           </div>
+                        )}
+                        {(activeOrg.role === 'owner' || (activeOrg.role === 'admin' && member.role !== 'owner' && member.role !== 'admin')) && member.id !== user?.id && (
+                          <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            className="h-7 text-xs px-2 ml-2" 
+                            onClick={() => handleRemoveMember(member.id)} 
+                            disabled={removeMember.isPending}
+                          >
+                            Remove
+                          </Button>
                         )}
                       </div>
                     </div>
