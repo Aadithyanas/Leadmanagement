@@ -268,7 +268,7 @@ export function DashboardOverview() {
               {leads?.slice(0, 4).map((lead) => (
                 <div key={lead.id} className="flex items-center gap-4 p-3 rounded-lg border bg-muted/30">
                   <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                    {lead.name.charAt(0)}
+                    {String(lead.name || 'U').charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-semibold">{lead.name}</p>

@@ -21,7 +21,7 @@ export function LeadCard({ lead, index }: LeadCardProps) {
   const { data: members } = useOrgMembers();
   const overdue = isOverdue(lead.followUpAt);
   const todayFU = isFollowUpToday(lead.followUpAt);
-  const isMapsLink = lead.websiteUrl?.includes('google.com/maps') || lead.websiteUrl?.includes('goo.gl/maps');
+  const isMapsLink = typeof lead.websiteUrl === 'string' && (lead.websiteUrl.includes('google.com/maps') || lead.websiteUrl.includes('goo.gl/maps'));
   const assignee = members?.find(m => m.id === lead.assignedTo);
 
   return (
