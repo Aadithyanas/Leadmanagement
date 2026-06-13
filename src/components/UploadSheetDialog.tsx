@@ -177,14 +177,16 @@ export function UploadSheetDialog() {
       const newLeads: CreateLeadInput[] = csvData.map(row => {
         const val = (key: string) => (mapping[key] ? row[mapping[key]] || '' : '');
         
-        const VALID_STATUSES = ['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost'];
+        const VALID_STATUSES = ['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost', 'Rejected'];
         const VALID_INDUSTRIES = ['Restaurant', 'Food & Beverage', 'Retail', 'Healthcare', 'Technology', 'Education', 'Real Estate', 'Finance', 'Manufacturing', 'E-Commerce', 'Hospitality', 'Other'];
 
-        const rawStatus = val('status');
-        const finalStatus = VALID_STATUSES.includes(rawStatus) ? rawStatus : 'New';
+        const rawStatus = val('status').trim();
+        const matchedStatus = VALID_STATUSES.find(s => s.toLowerCase() === rawStatus.toLowerCase());
+        const finalStatus = matchedStatus || 'New';
 
-        const rawIndustry = val('industry');
-        const finalIndustry = VALID_INDUSTRIES.includes(rawIndustry) ? rawIndustry : 'Other';
+        const rawIndustry = val('industry').trim();
+        const matchedIndustry = VALID_INDUSTRIES.find(i => i.toLowerCase() === rawIndustry.toLowerCase());
+        const finalIndustry = matchedIndustry || 'Other';
 
         // Auto-assign to self if member, otherwise leave unassigned
         const { user, activeOrg } = useAuthStore.getState();
