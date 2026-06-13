@@ -36,6 +36,7 @@ function mapLeadFromDb(db: DbLead): Lead {
     createdAt: db.created_at || new Date().toISOString(),
     updatedAt: db.updated_at || new Date().toISOString(),
     assignedTo: db.assigned_to,
+    sourceCategory: db.source_category,
     customFields: (db.custom_fields as Record<string, string>) || {},
   };
 }
@@ -277,6 +278,7 @@ export async function createLead(input: CreateLeadInput): Promise<Lead> {
       website_url: input.websiteUrl,
       requirements: input.requirements,
       assigned_to: input.assignedTo || null,
+      source_category: input.sourceCategory || null,
       custom_fields: input.customFields || {},
     })
     .select()
@@ -441,6 +443,7 @@ export async function createLeadsBulk(leads: CreateLeadInput[]): Promise<{ messa
     website_url: l.websiteUrl,
     requirements: l.requirements,
     assigned_to: l.assignedTo || null,
+    source_category: l.sourceCategory || null,
     custom_fields: l.customFields || {},
   }));
 

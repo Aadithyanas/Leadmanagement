@@ -38,6 +38,7 @@ export interface Lead {
   updatedAt: string;
   owner?: string;
   assignedTo?: string | null;
+  sourceCategory?: string | null;
   customFields?: Record<string, string>;
 }
 
@@ -47,6 +48,12 @@ export interface Discussion {
   note: string;
   followUpAt: string | null;
   createdAt: string;
+}
+
+export interface CreateDiscussionInput {
+  leadId: string;
+  note: string;
+  followUpAt?: string | null;
 }
 
 export interface CreateLeadInput {
@@ -60,6 +67,7 @@ export interface CreateLeadInput {
   websiteUrl?: string;
   requirements?: string;
   assignedTo?: string | null;
+  sourceCategory?: string | null;
   customFields?: Record<string, string>;
 }
 

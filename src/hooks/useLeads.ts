@@ -100,26 +100,32 @@ export function useFilteredLeads() {
   const { data: leads, ...rest } = useLeads();
   const { data: members } = useOrgMembers();
   const { user, activeOrg } = useAuthStore();
+  const { sourceCategoryFilter } = useLeadStore();
   
   if (!leads) return { data: leads, ...rest };
+
+  // Filter by sourceCategory first if not 'All'
+  let filteredData = leads;
+  if (sourceCategoryFilter !== 'All') {
+    filteredData = leads.filter(l => l.sourceCategory === sourceCategoryFilter);
+  }
   
   if (activeOrg?.role === 'owner' || activeOrg?.role === 'admin' || activeOrg?.role === 'hr') {
-    return { data: leads, ...rest };
+    return { data: filteredData, ...rest };
   }
   
   const currentUserMember = members?.find(m => m.id === user?.id);
   
   if (activeOrg?.role === 'leader') {
     if (!currentUserMember?.teamId) {
-      return { data: leads.filter(l => l.assignedTo === user?.id || l.assignedTo === null), ...rest };
+      return { data: filteredData.filter(l => l.assignedTo === user?.id || l.assignedTo === null), ...rest };
     }
     const teamMemberIds = members?.filter(m => m.teamId === currentUserMember.teamId).map(m => m.id) || [];
-    const filtered = leads.filter(l => l.assignedTo === null || teamMemberIds.includes(l.assignedTo));
-    return { data: filtered, ...rest };
+    return { data: filteredData.filter(l => l.assignedTo === null || teamMemberIds.includes(l.assignedTo)), ...rest };
   }
   
   // Member
-  return { data: leads.filter(l => l.assignedTo === user?.id), ...rest };
+  return { data: filteredData.filter(l => l.assignedTo === user?.id), ...rest };
 }
 
 export function useAssignableMembers() {

@@ -6,6 +6,7 @@ type Tab = 'dashboard' | 'leads' | 'discover' | 'settings' | 'profile' | 'reject
 interface LeadStoreState {
   searchQuery: string;
   statusFilter: LeadStatus | 'All';
+  sourceCategoryFilter: string | 'All';
   viewMode: 'grid' | 'table';
   activeTab: Tab;
   apifyApiKey: string;
@@ -24,6 +25,7 @@ interface LeadStoreState {
 
   setSearchQuery: (q: string) => void;
   setStatusFilter: (s: LeadStatus | 'All') => void;
+  setSourceCategoryFilter: (s: string | 'All') => void;
   setViewMode: (mode: 'grid' | 'table') => void;
   setActiveTab: (tab: Tab) => void;
   setApifyApiKey: (key: string) => void;
@@ -47,6 +49,7 @@ interface LeadStoreState {
 export const useLeadStore = create<LeadStoreState>((set) => ({
   searchQuery: '',
   statusFilter: 'All',
+  sourceCategoryFilter: 'All',
   viewMode: 'grid',
   activeTab: 'dashboard',
   apifyApiKey: localStorage.getItem('leadflow_apify_key') || '',
@@ -65,6 +68,7 @@ export const useLeadStore = create<LeadStoreState>((set) => ({
 
   setSearchQuery: (q) => set({ searchQuery: q }),
   setStatusFilter: (s) => set({ statusFilter: s }),
+  setSourceCategoryFilter: (s) => set({ sourceCategoryFilter: s }),
   setViewMode: (mode) => set({ viewMode: mode }),
   setActiveTab: (tab) => set({ activeTab: tab }),
   setApifyApiKey: (key) => {

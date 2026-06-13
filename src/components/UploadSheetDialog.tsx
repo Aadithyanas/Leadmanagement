@@ -162,6 +162,7 @@ export function UploadSheetDialog() {
           hasWebsite: !!val('websiteUrl'),
           requirements: val('requirements'),
           assignedTo: autoAssignTo,
+          sourceCategory: file?.name,
           customFields,
         };
       }).filter(lead => lead.name.trim() !== ''); // Filter out completely empty names

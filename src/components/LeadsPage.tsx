@@ -11,7 +11,7 @@ import {
 import { Search, Plus, FileJson, FileSpreadsheet, Keyboard, Unplug, LayoutGrid, List, Download, Trash2, X, CheckCircle2 } from 'lucide-react';
 import type { LeadStatus } from '@/types';
 import { exportLeadsToCSV } from '@/lib/export-utils';
-import { useFilteredLeads, useDeleteLead } from '@/hooks/useLeads';
+import { useLeads, useFilteredLeads, useDeleteLead } from '@/hooks/useLeads';
 import { toast } from '@/hooks/useToast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -24,12 +24,17 @@ export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
   const {
     searchQuery, setSearchQuery,
     statusFilter, setStatusFilter,
+    sourceCategoryFilter, setSourceCategoryFilter,
     viewMode, setViewMode,
     openAddLead, setUploadJsonOpen, setUploadSheetOpen, setConnectApifyOpen,
     apifyApiKey, setActiveTab, selectedLeadIds, clearSelection
   } = useLeadStore();
+  
+  const { data: allLeads } = useLeads();
   const { data: leads } = useFilteredLeads();
   const deleteLead = useDeleteLead();
+
+  const uniqueCategories = Array.from(new Set((allLeads || []).map(l => l.sourceCategory).filter(Boolean)));
 
   const leadsToExport = selectedLeadIds.length > 0 
     ? leads?.filter(l => selectedLeadIds.includes(l.id)) 
@@ -150,19 +155,38 @@ export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
         <div className="flex items-center gap-3 w-full sm:w-auto px-2">
           {/* Status Filter */}
           {!isRejectedView && (
-            <Select
-              value={statusFilter}
-              onValueChange={(v) => setStatusFilter(v as LeadStatus | 'All')}
-            >
-              <SelectTrigger id="filter-status" className="w-[140px] border-none bg-transparent hover:bg-muted/50 focus:ring-0">
-                <SelectValue placeholder="Filter" />
-              </SelectTrigger>
-              <SelectContent>
-                {ALL_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <>
+              {uniqueCategories.length > 0 && (
+                <Select
+                  value={sourceCategoryFilter}
+                  onValueChange={(v) => setSourceCategoryFilter(v)}
+                >
+                  <SelectTrigger className="w-[160px] border-none bg-transparent hover:bg-muted/50 focus:ring-0">
+                    <SelectValue placeholder="Sheet / Playlist" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Sheets</SelectItem>
+                    {uniqueCategories.map((cat: any) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              
+              <Select
+                value={statusFilter}
+                onValueChange={(v) => setStatusFilter(v as LeadStatus | 'All')}
+              >
+                <SelectTrigger id="filter-status" className="w-[140px] border-none bg-transparent hover:bg-muted/50 focus:ring-0">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ALL_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
           )}
 
           {/* View Toggle */}
