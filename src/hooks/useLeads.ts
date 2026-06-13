@@ -23,6 +23,7 @@ import type {
   Lead,
 } from '@/types';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useLeadStore } from '@/store/useLeadStore';
 
 // ---------- Members & Teams ----------
 export function useOrgMembers() {
