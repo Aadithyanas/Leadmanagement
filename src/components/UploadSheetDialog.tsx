@@ -244,7 +244,7 @@ export function UploadSheetDialog() {
                         <SelectValue placeholder="Select column..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">-- Ignore --</SelectItem>
+                        <SelectItem value="none">-- Leave Blank --</SelectItem>
                         {csvHeaders.map(header => (
                           <SelectItem key={header} value={header}>
                             {header}
@@ -280,7 +280,7 @@ export function UploadSheetDialog() {
               <Button variant="outline" onClick={() => setStep('upload')} disabled={isProcessing}>
                 Back
               </Button>
-              <Button onClick={handleImport} disabled={isProcessing || !mapping.name} className="gap-2">
+              <Button onClick={handleImport} disabled={isProcessing} className="gap-2">
                 {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
                 {isProcessing ? 'Importing...' : 'Import Leads'}
               </Button>
