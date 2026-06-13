@@ -154,7 +154,7 @@ export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
 
         <div className="h-8 w-px bg-border hidden sm:block mx-1" />
 
-        <div className="flex items-center gap-3 w-full sm:w-auto px-2">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto px-2">
           {/* Status Filter */}
           {!isRejectedView && (
             <>

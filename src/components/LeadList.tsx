@@ -114,13 +114,9 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
                         />
                       </th>
                       <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Name / Company</th>
-                      {!isPlaylistSpecific && (
-                        <>
-                          <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Assigned</th>
-                          <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Industry</th>
-                          <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Contact</th>
-                        </>
-                      )}
+                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Assigned</th>
+                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Industry</th>
+                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Contact</th>
                       <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Status</th>
                       {isPlaylistSpecific && dynamicColumns.map(col => (
                         <th key={col} className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap text-amber-500/80">
@@ -167,7 +163,7 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
                                 </span>
                               </div>
                             )}
-                            {!isPlaylistSpecific && lead.customFields && Object.keys(lead.customFields).length > 0 && (
+                            {lead.customFields && Object.keys(lead.customFields).length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-1.5 max-w-[300px]">
                                 {Object.entries(lead.customFields).map(([k, v]) => (
                                   <span key={k} className="inline-flex items-center rounded border border-border/50 bg-secondary/50 px-1.5 py-0.5 text-[9px] font-medium text-secondary-foreground truncate max-w-full">
@@ -177,30 +173,26 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
                               </div>
                             )}
                           </td>
-                          {!isPlaylistSpecific && (
-                            <>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                {lead.assignedTo ? (
-                                  <span className="inline-flex items-center rounded-md bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300">
-                                    {assignee ? (assignee.name || assignee.email) : 'Assigned'}
-                                  </span>
-                                ) : (
-                                  <span className="text-xs text-muted-foreground">Unassigned</span>
-                                )}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                 {lead.industry && (
-                                  <span className="inline-flex items-center rounded-md bg-violet-50 dark:bg-violet-950/30 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300">
-                                    {lead.industry}
-                                  </span>
-                                )}
-                              </td>
-                              <td className="px-4 py-3 text-xs whitespace-nowrap">
-                                {lead.email && <div>{lead.email}</div>}
-                                {lead.phone && <div className="text-muted-foreground">{lead.phone}</div>}
-                              </td>
-                            </>
-                          )}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {lead.assignedTo ? (
+                              <span className="inline-flex items-center rounded-md bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300">
+                                {assignee ? (assignee.name || assignee.email) : 'Assigned'}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Unassigned</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                             {lead.industry && (
+                              <span className="inline-flex items-center rounded-md bg-violet-50 dark:bg-violet-950/30 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300">
+                                {lead.industry}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-xs whitespace-nowrap">
+                            {lead.email && <div>{lead.email}</div>}
+                            {lead.phone && <div className="text-muted-foreground">{lead.phone}</div>}
+                          </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                               lead.status === 'New' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
