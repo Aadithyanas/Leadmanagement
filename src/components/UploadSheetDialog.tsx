@@ -97,9 +97,11 @@ export function UploadSheetDialog() {
       skipEmptyLines: true,
       complete: (results) => {
         if (results.meta.fields && results.data.length > 0) {
-          setCsvHeaders(results.meta.fields);
+          // Filter out empty headers and remove duplicates to prevent Radix UI crashes
+          const validHeaders = Array.from(new Set(results.meta.fields.filter(h => h && h.trim() !== '')));
+          setCsvHeaders(validHeaders);
           setCsvData(results.data);
-          guessMapping(results.meta.fields);
+          guessMapping(validHeaders);
           setStep('mapping');
         } else {
           toast({ title: 'Invalid File', description: 'Could not find any data or headers in this CSV.', variant: 'destructive' });
