@@ -308,6 +308,7 @@ export type Database = {
         | "Proposal Sent"
         | "Won"
         | "Lost"
+        | "Rejected"
       org_role: "owner" | "admin" | "leader" | "member"
     }
     CompositeTypes: {
@@ -443,6 +444,7 @@ export const Constants = {
         "Proposal Sent",
         "Won",
         "Lost",
+        "Rejected",
       ],
       org_role: ["owner", "admin", "leader", "member"],
     },
