@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, Plus, FileJson, FileSpreadsheet, Keyboard, Unplug, LayoutGrid, List, Download, Trash2, X, CheckCircle2 } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Search, Plus, FileJson, FileSpreadsheet, Keyboard, Unplug, LayoutGrid, List, Download, Trash2, X, CheckCircle2, FolderOpen } from 'lucide-react';
 import type { LeadStatus } from '@/types';
 import { exportLeadsToCSV } from '@/lib/export-utils';
 import { useLeads, useFilteredLeads, useDeleteLead } from '@/hooks/useLeads';
@@ -27,7 +27,8 @@ export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
     sourceCategoryFilter, setSourceCategoryFilter,
     viewMode, setViewMode,
     openAddLead, setUploadJsonOpen, setUploadSheetOpen, setConnectApifyOpen,
-    apifyApiKey, setActiveTab, selectedLeadIds, clearSelection
+    apifyApiKey, setActiveTab, selectedLeadIds, clearSelection,
+    isPlaylistView, setIsPlaylistView
   } = useLeadStore();
   
   const { data: allLeads } = useLeads();
@@ -189,31 +190,92 @@ export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
             </>
           )}
 
-          {/* View Toggle */}
-          <div className="flex items-center rounded-md border p-1 bg-secondary/50 shrink-0">
+          {/* Playlist View Toggle */}
+          <div className="flex items-center rounded-md border p-1 bg-secondary/50 shrink-0 mr-2">
             <Button
-              variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-              size="icon"
-              className={`h-7 w-7 rounded-sm ${viewMode === 'grid' ? 'bg-background shadow-sm' : ''}`}
-              onClick={() => setViewMode('grid')}
-              title="Grid View"
+              variant={!isPlaylistView ? 'secondary' : 'ghost'}
+              size="sm"
+              className={`h-7 px-3 text-xs rounded-sm ${!isPlaylistView ? 'bg-background shadow-sm' : ''}`}
+              onClick={() => setIsPlaylistView(false)}
             >
-              <LayoutGrid className="h-4 w-4" />
+              Leads
             </Button>
             <Button
-              variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-              size="icon"
-              className={`h-7 w-7 rounded-sm ${viewMode === 'table' ? 'bg-background shadow-sm' : ''}`}
-              onClick={() => setViewMode('table')}
-              title="Table View"
+              variant={isPlaylistView ? 'secondary' : 'ghost'}
+              size="sm"
+              className={`h-7 px-3 text-xs rounded-sm ${isPlaylistView ? 'bg-background shadow-sm' : ''}`}
+              onClick={() => setIsPlaylistView(true)}
             >
-              <List className="h-4 w-4" />
+              Playlists
             </Button>
           </div>
+
+          {/* View Toggle (Only in Leads View) */}
+          {!isPlaylistView && (
+            <div className="flex items-center rounded-md border p-1 bg-secondary/50 shrink-0">
+              <Button
+                variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                size="icon"
+                className={`h-7 w-7 rounded-sm ${viewMode === 'grid' ? 'bg-background shadow-sm' : ''}`}
+                onClick={() => setViewMode('grid')}
+                title="Grid View"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+                size="icon"
+                className={`h-7 w-7 rounded-sm ${viewMode === 'table' ? 'bg-background shadow-sm' : ''}`}
+                onClick={() => setViewMode('table')}
+                title="Table View"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
-      <LeadList isRejectedView={isRejectedView} />
+      {isPlaylistView ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {uniqueCategories.length === 0 ? (
+            <div className="col-span-full py-12 text-center text-muted-foreground border border-dashed rounded-lg">
+              <FolderOpen className="h-12 w-12 mx-auto mb-3 opacity-20" />
+              <p>No playlists available yet.</p>
+              <p className="text-sm">Upload a CSV sheet to automatically create a playlist.</p>
+            </div>
+          ) : (
+            uniqueCategories.map((cat: any) => {
+              const count = allLeads?.filter(l => l.sourceCategory === cat).length || 0;
+              return (
+                <Card 
+                  key={cat} 
+                  className="cursor-pointer hover:border-primary/50 transition-colors group"
+                  onClick={() => {
+                    setSourceCategoryFilter(cat);
+                    setIsPlaylistView(false);
+                  }}
+                >
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base group-hover:text-primary transition-colors line-clamp-1" title={cat}>
+                      {cat}
+                    </CardTitle>
+                    <CardDescription>Imported Sheet</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Total Leads:</span>
+                      <span className="font-semibold bg-secondary px-2 py-0.5 rounded text-xs">{count}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </div>
+      ) : (
+        <LeadList isRejectedView={isRejectedView} />
+      )}
 
       {/* Floating Bulk Actions Bar */}
       <AnimatePresence>

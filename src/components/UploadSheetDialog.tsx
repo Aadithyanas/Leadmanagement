@@ -116,11 +116,6 @@ export function UploadSheetDialog() {
   };
 
   const handleImport = async () => {
-    if (!mapping.name) {
-      toast({ title: 'Missing Field', description: 'You must map the Name field to import leads.', variant: 'destructive' });
-      return;
-    }
-
     setIsProcessing(true);
     
     try {
@@ -151,8 +146,12 @@ export function UploadSheetDialog() {
           });
         }
 
+        const mappedName = val('name');
+        const companyName = val('company');
+        const finalName = mappedName.trim() || companyName.trim() || 'Unknown Lead';
+
         return {
-          name: val('name'),
+          name: finalName,
           company: val('company'),
           email: val('email'),
           phone: val('phone'),
@@ -165,10 +164,10 @@ export function UploadSheetDialog() {
           sourceCategory: file?.name,
           customFields,
         };
-      }).filter(lead => lead.name.trim() !== ''); // Filter out completely empty names
+      });
 
       if (newLeads.length === 0) {
-        throw new Error("No valid leads found after mapping. Ensure the 'Name' column is not completely empty.");
+        throw new Error("No valid data rows found in the CSV.");
       }
 
       await createLeadsBulk.mutateAsync(newLeads);

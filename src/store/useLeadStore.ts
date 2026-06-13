@@ -22,6 +22,7 @@ interface LeadStoreState {
   selectedLeadIds: string[];
   isEditLeadOpen: boolean;
   editingLeadId: string | null;
+  isPlaylistView: boolean;
 
   setSearchQuery: (q: string) => void;
   setStatusFilter: (s: LeadStatus | 'All') => void;
@@ -44,6 +45,7 @@ interface LeadStoreState {
   toggleLeadSelection: (id: string) => void;
   setSelectedLeadIds: (ids: string[]) => void;
   clearSelection: () => void;
+  setIsPlaylistView: (val: boolean) => void;
 }
 
 export const useLeadStore = create<LeadStoreState>((set) => ({
@@ -65,6 +67,7 @@ export const useLeadStore = create<LeadStoreState>((set) => ({
   selectedLeadIds: [],
   isEditLeadOpen: false,
   editingLeadId: null,
+  isPlaylistView: false,
 
   setSearchQuery: (q) => set({ searchQuery: q }),
   setStatusFilter: (s) => set({ statusFilter: s }),
@@ -104,4 +107,5 @@ export const useLeadStore = create<LeadStoreState>((set) => ({
   })),
   setSelectedLeadIds: (ids) => set({ selectedLeadIds: ids }),
   clearSelection: () => set({ selectedLeadIds: [] }),
+  setIsPlaylistView: (val) => set({ isPlaylistView: val }),
 }));
