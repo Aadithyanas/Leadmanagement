@@ -68,7 +68,7 @@ export function AddLeadDialog() {
         hasWebsite: form.hasWebsite,
         websiteUrl: form.websiteUrl.trim(),
         requirements: form.requirements.trim(),
-        assignedTo: form.assignedTo || (activeOrg?.role === 'member' ? user?.id : undefined),
+        assignedTo: form.assignedTo || user?.id,
         sourceCategory: 'Manual',
         customFields: customFields.reduce((acc, curr) => {
           if (curr.key.trim() && curr.value.trim()) acc[curr.key.trim()] = curr.value.trim();
