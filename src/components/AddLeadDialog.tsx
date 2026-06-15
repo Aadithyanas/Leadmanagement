@@ -23,7 +23,7 @@ const INDUSTRIES: Industry[] = [
 
 export function AddLeadDialog() {
   const { isAddLeadOpen, closeAddLead } = useLeadStore();
-  const { activeOrg } = useAuthStore();
+  const { activeOrg, user } = useAuthStore();
   const assignableMembers = useAssignableMembers();
   const { data: teams } = useTeams();
   const createLead = useCreateLead();
@@ -68,7 +68,8 @@ export function AddLeadDialog() {
         hasWebsite: form.hasWebsite,
         websiteUrl: form.websiteUrl.trim(),
         requirements: form.requirements.trim(),
-        assignedTo: form.assignedTo || undefined,
+        assignedTo: form.assignedTo || (activeOrg?.role === 'member' ? user?.id : undefined),
+        sourceCategory: 'Manual',
         customFields: customFields.reduce((acc, curr) => {
           if (curr.key.trim() && curr.value.trim()) acc[curr.key.trim()] = curr.value.trim();
           return acc;
