@@ -22,7 +22,7 @@ const INDUSTRIES: Industry[] = [
 ];
 
 export function AddLeadDialog() {
-  const { isAddLeadOpen, closeAddLead } = useLeadStore();
+  const { isAddLeadOpen, closeAddLead, sourceCategoryFilter } = useLeadStore();
   const { activeOrg, user } = useAuthStore();
   const assignableMembers = useAssignableMembers();
   const { data: teams } = useTeams();
@@ -69,7 +69,7 @@ export function AddLeadDialog() {
         websiteUrl: form.websiteUrl.trim(),
         requirements: form.requirements.trim(),
         assignedTo: form.assignedTo || user?.id,
-        sourceCategory: 'Manual',
+        sourceCategory: sourceCategoryFilter !== 'All' ? sourceCategoryFilter : 'Manual',
         customFields: customFields.reduce((acc, curr) => {
           if (curr.key.trim() && curr.value.trim()) acc[curr.key.trim()] = curr.value.trim();
           return acc;
