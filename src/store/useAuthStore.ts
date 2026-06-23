@@ -15,6 +15,8 @@ interface AuthStoreState {
   setUser: (user: User | null) => void;
   setActiveOrg: (org: Org | null) => void;
   setOrgs: (orgs: Org[]) => void;
+  isSuperAdmin: boolean;
+  setIsSuperAdmin: (isSuperAdmin: boolean) => void;
 }
 
 export const useAuthStore = create<AuthStoreState>((set) => ({
@@ -24,4 +26,6 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
   setUser: (user) => set({ user }),
   setActiveOrg: (activeOrg) => set({ activeOrg }),
   setOrgs: (orgs) => set({ orgs }),
+  isSuperAdmin: false,
+  setIsSuperAdmin: (isSuperAdmin) => set({ isSuperAdmin }),
 }));

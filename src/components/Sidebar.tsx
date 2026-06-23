@@ -1,5 +1,6 @@
-import { LayoutDashboard, Users, Compass, Settings, LogOut, Zap, User, UserX } from 'lucide-react';
+import { LayoutDashboard, Users, Compass, Settings, LogOut, Zap, User, UserX, ShieldAlert, Trash2, BrainCircuit } from 'lucide-react';
 import { useLeadStore } from '@/store/useLeadStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,6 +17,7 @@ interface SidebarProps {
 
 export function Sidebar({ onLogout, isOpen, onClose }: SidebarProps) {
   const { activeTab, setActiveTab } = useLeadStore();
+  const { isSuperAdmin, activeOrg } = useAuthStore();
   const { isInstallable, installPWA } = usePWAInstall();
 
   const handleTabClick = (tabId: typeof activeTab) => {
@@ -31,6 +33,18 @@ export function Sidebar({ onLogout, isOpen, onClose }: SidebarProps) {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'settings', label: 'Settings', icon: Settings },
   ] as const;
+
+  const isElevated = activeOrg?.role === 'owner' || activeOrg?.role === 'admin' || isSuperAdmin;
+  const adminNavItems = [...navItems];
+  
+  if (isElevated) {
+    (adminNavItems as any).push({ id: 'ai_analytics', label: 'AI Analytics', icon: BrainCircuit });
+    (adminNavItems as any).push({ id: 'trash', label: 'Trash', icon: Trash2 });
+  }
+
+  const finalNavItems = isSuperAdmin
+    ? [{ id: 'super_admin' as const, label: 'Super Admin', icon: ShieldAlert }, ...adminNavItems]
+    : adminNavItems;
 
   return (
     <>
@@ -66,7 +80,7 @@ export function Sidebar({ onLogout, isOpen, onClose }: SidebarProps) {
         </div>
 
         <nav className="flex-1 px-4 space-y-2">
-          {navItems.map((item) => (
+          {finalNavItems.map((item) => (
             <button
               key={item.id}
               onClick={() => handleTabClick(item.id)}

@@ -128,6 +128,8 @@ export function SettingsPage({ onLogout }: { onLogout?: () => void }) {
         </div>
       </div>
 
+
+
       <div className="border rounded-lg bg-card overflow-hidden">
         <div className="border-b p-6 bg-muted/20">
           <div className="flex items-center gap-3 mb-1">

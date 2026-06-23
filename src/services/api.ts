@@ -38,6 +38,7 @@ function mapLeadFromDb(db: DbLead): Lead {
     assignedTo: db.assigned_to,
     sourceCategory: db.source_category,
     customFields: (db.custom_fields as Record<string, string>) || {},
+    deletedAt: db.deleted_at,
   };
 }
 
@@ -246,7 +247,36 @@ export async function fetchLeads(): Promise<Lead[]> {
   const { data, error } = await query;
 
   if (error) throw new Error(error.message);
-  return (data || []).map(mapLeadFromDb);
+  return (data || [])
+    .filter((d: any) => !d.deleted_at)
+    .map(mapLeadFromDb);
+}
+
+export async function fetchDeletedLeads(): Promise<Lead[]> {
+  const org = useAuthStore.getState().activeOrg;
+  if (!org) throw new Error('Not logged in');
+  
+  if (org.role !== 'owner' && org.role !== 'admin') {
+    return []; // Only owners and admins can fetch deleted leads
+  }
+
+  const { data, error } = await supabase
+    .from('leads')
+    .select('*')
+    .eq('org_id', org.id)
+    // .not('deleted_at', 'is', null) // Removed to prevent crash before migration
+    // .order('deleted_at', { ascending: false });
+
+  if (error) {
+    // If column doesn't exist, this might throw but the fallback will catch it
+    if (error.message.includes('deleted_at')) return [];
+    throw new Error(error.message);
+  }
+
+  return (data || [])
+    .filter((d: any) => d.deleted_at != null)
+    .sort((a: any, b: any) => new Date(b.deleted_at).getTime() - new Date(a.deleted_at).getTime())
+    .map(mapLeadFromDb);
 }
 
 export async function fetchLeadById(id: string): Promise<Lead | undefined> {
@@ -321,12 +351,47 @@ export async function updateLeadStatus(id: string, status: LeadStatus): Promise<
   return updateLead(id, { status });
 }
 
-export async function deleteLead(id: string): Promise<void> {
-  const orgId = getOrgId();
+export async function deleteLead(id: string, permanent: boolean = false): Promise<void> {
+  const org = useAuthStore.getState().activeOrg;
+  if (!org) throw new Error('Not logged in');
+
+  const orgId = org.id;
+  
+  if (permanent) {
+    if (org.role !== 'owner' && org.role !== 'admin') {
+      throw new Error('Only admins and owners can permanently delete leads.');
+    }
+    const { error } = await supabase
+      .from('leads')
+      .delete()
+      .eq('org_id', orgId)
+      .eq('id', id);
+
+    if (error) throw new Error(error.message);
+  } else {
+    // Soft delete
+    const { error } = await supabase
+      .from('leads')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('org_id', orgId)
+      .eq('id', id);
+
+    if (error) throw new Error(error.message);
+  }
+}
+
+export async function restoreLead(id: string): Promise<void> {
+  const org = useAuthStore.getState().activeOrg;
+  if (!org) throw new Error('Not logged in');
+  
+  if (org.role !== 'owner' && org.role !== 'admin') {
+    throw new Error('Only admins and owners can restore leads.');
+  }
+
   const { error } = await supabase
     .from('leads')
-    .delete()
-    .eq('org_id', orgId)
+    .update({ deleted_at: null })
+    .eq('org_id', org.id)
     .eq('id', id);
 
   if (error) throw new Error(error.message);
@@ -363,6 +428,30 @@ export async function createDiscussion(input: CreateDiscussionInput): Promise<Di
   await updateLead(input.leadId, {
     lastDiscussion: input.note,
     followUpAt: input.followUpAt || undefined,
+  });
+
+  return mapDiscussionFromDb(data);
+}
+
+export async function updateDiscussion(id: string, leadId: string, note: string, followUpAt: string | null): Promise<Discussion> {
+  const orgId = getOrgId();
+  const { data, error } = await supabase
+    .from('discussions')
+    .update({
+      note,
+      follow_up_at: followUpAt,
+    })
+    .eq('org_id', orgId)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  
+  // also sync to the lead
+  await updateLead(leadId, {
+    lastDiscussion: note,
+    followUpAt: followUpAt || undefined,
   });
 
   return mapDiscussionFromDb(data);

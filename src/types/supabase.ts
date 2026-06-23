@@ -76,6 +76,7 @@ export type Database = {
           assigned_to: string | null
           source_category: string | null
           custom_fields: Json | null
+          deleted_at: string | null
         }
         Insert: {
           company?: string | null
@@ -96,6 +97,7 @@ export type Database = {
           assigned_to?: string | null
           source_category?: string | null
           custom_fields?: Json | null
+          deleted_at?: string | null
         }
         Update: {
           company?: string | null
@@ -116,6 +118,7 @@ export type Database = {
           assigned_to?: string | null
           source_category?: string | null
           custom_fields?: Json | null
+          deleted_at?: string | null
         }
         Relationships: [
           {

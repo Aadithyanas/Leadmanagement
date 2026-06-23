@@ -191,6 +191,27 @@ export function UploadSheetDialog() {
     }
   };
 
+  const normalizeHeader = (rawHeader: string) => {
+    let normalized = rawHeader.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+    
+    if (['slno', 'sino', 'sno', 'serialnumber', 'serialno'].includes(normalized)) return 'Serial Number';
+    if (['pincode', 'pin', 'zip', 'zipcode', 'postalcode'].includes(normalized)) return 'PIN Code';
+    if (['establishedyear', 'estyear', 'founded', 'year'].includes(normalized)) return 'Est. Year';
+    if (['district', 'dist', 'city'].includes(normalized)) return 'District';
+    if (['address', 'addr', 'location'].includes(normalized)) return 'Address';
+    if (['remarks', 'remark', 'notes', 'comment', 'comments'].includes(normalized)) return 'Remarks';
+    if (['enddate', 'edate'].includes(normalized)) return 'End Date';
+    if (['startdate', 'sdate'].includes(normalized)) return 'Start Date';
+    if (['priority', 'pri'].includes(normalized)) return 'Priority';
+    
+    // Capitalize first letter of each word as fallback
+    return rawHeader
+      .trim()
+      .split(/[\s_]+/)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   const handleImport = async () => {
     setIsProcessing(true);
     
@@ -218,8 +239,17 @@ export function UploadSheetDialog() {
         
         if (importUnmapped) {
           csvHeaders.forEach(header => {
-            if (!mappedCsvHeaders.includes(header) && row[header]) {
-              customFields[header] = String(row[header]).trim();
+            if (!mappedCsvHeaders.includes(header) && row[header] !== undefined && row[header] !== '') {
+              // Avoid duplicating standard fields if they somehow slipped in
+              const val = String(row[header]).trim();
+              if (val) {
+                const cleanKey = normalizeHeader(header);
+                // Don't add status, industry, etc. as custom fields again if they were accidentally left unmapped
+                const standardKeys = LEAD_FIELDS.map(f => f.label.toLowerCase());
+                if (!standardKeys.some(k => cleanKey.toLowerCase().includes(k))) {
+                  customFields[cleanKey] = val;
+                }
+              }
             }
           });
         }

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { LeadStatus } from '@/types';
 
-type Tab = 'dashboard' | 'leads' | 'discover' | 'settings' | 'profile' | 'rejected';
+type Tab = 'dashboard' | 'leads' | 'discover' | 'settings' | 'profile' | 'rejected' | 'super_admin' | 'trash' | 'ai_analytics';
 
 interface LeadStoreState {
   searchQuery: string;
@@ -23,6 +23,8 @@ interface LeadStoreState {
   isEditLeadOpen: boolean;
   editingLeadId: string | null;
   isPlaylistView: boolean;
+  hiddenColumns: string[];
+  columnOrder: string[];
 
   setSearchQuery: (q: string) => void;
   setStatusFilter: (s: LeadStatus | 'All') => void;
@@ -46,6 +48,8 @@ interface LeadStoreState {
   setSelectedLeadIds: (ids: string[]) => void;
   clearSelection: () => void;
   setIsPlaylistView: (val: boolean) => void;
+  toggleColumnVisibility: (col: string) => void;
+  setColumnOrder: (order: string[]) => void;
 }
 
 export const useLeadStore = create<LeadStoreState>((set) => ({
@@ -68,6 +72,8 @@ export const useLeadStore = create<LeadStoreState>((set) => ({
   isEditLeadOpen: false,
   editingLeadId: null,
   isPlaylistView: false,
+  hiddenColumns: JSON.parse(localStorage.getItem('leadflow_hidden_columns') || '[]'),
+  columnOrder: JSON.parse(localStorage.getItem('leadflow_column_order') || '[]'),
 
   setSearchQuery: (q) => set({ searchQuery: q }),
   setStatusFilter: (s) => set({ statusFilter: s }),
@@ -108,4 +114,15 @@ export const useLeadStore = create<LeadStoreState>((set) => ({
   setSelectedLeadIds: (ids) => set({ selectedLeadIds: ids }),
   clearSelection: () => set({ selectedLeadIds: [] }),
   setIsPlaylistView: (val) => set({ isPlaylistView: val }),
+  toggleColumnVisibility: (col) => set((s) => {
+    const newHidden = s.hiddenColumns.includes(col)
+      ? s.hiddenColumns.filter(c => c !== col)
+      : [...s.hiddenColumns, col];
+    localStorage.setItem('leadflow_hidden_columns', JSON.stringify(newHidden));
+    return { hiddenColumns: newHidden };
+  }),
+  setColumnOrder: (order) => {
+    localStorage.setItem('leadflow_column_order', JSON.stringify(order));
+    set({ columnOrder: order });
+  },
 }));

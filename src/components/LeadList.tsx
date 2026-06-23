@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useFilteredLeads, useOrgMembers } from '@/hooks/useLeads';
 import { useLeadStore } from '@/store/useLeadStore';
 import { LeadCard } from '@/components/LeadCard';
@@ -5,12 +6,14 @@ import { isFollowUpToday, isOverdue } from '@/lib/date-utils';
 import { Inbox, Loader2, CheckSquare, Square, MapPin, Globe, Ban } from 'lucide-react';
 import type { Lead } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
+  const [showCustomFields, setShowCustomFields] = useState(false);
   const { data: leads, isLoading } = useFilteredLeads();
   const { data: members } = useOrgMembers();
-  const { searchQuery, statusFilter, sourceCategoryFilter, viewMode, openTimeline, selectedLeadIds, toggleLeadSelection, setSelectedLeadIds } = useLeadStore();
+  const { searchQuery, statusFilter, sourceCategoryFilter, viewMode, openTimeline, selectedLeadIds, toggleLeadSelection, setSelectedLeadIds, hiddenColumns, columnOrder } = useLeadStore();
 
   if (isLoading) {
     return (
@@ -56,7 +59,11 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
       Object.keys(lead.customFields).forEach(k => customFieldKeys.add(k));
     }
   });
-  const dynamicColumns = Array.from(customFieldKeys).sort();
+  const dynamicColumns = Array.from(customFieldKeys);
+  const newCols = dynamicColumns.filter(c => !columnOrder.includes(c)).sort();
+  const orderedCols = columnOrder.filter(c => dynamicColumns.includes(c));
+  const displayColumns = [...orderedCols, ...newCols].filter(col => !hiddenColumns.includes(col));
+  const activeCustomColumns = showCustomFields ? displayColumns : [];
 
   // Partition: today follow-ups, overdue, rest
   const todayLeads: Lead[] = [];
@@ -85,6 +92,18 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
 
   return (
     <div className="space-y-6">
+      {displayColumns.length > 0 && (
+        <div className="flex justify-end">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowCustomFields(!showCustomFields)}
+            className="text-xs border-amber-500/20 text-amber-600 hover:bg-amber-500/10 dark:border-amber-500/30 dark:text-amber-400 dark:hover:bg-amber-500/20"
+          >
+            {showCustomFields ? 'Hide Custom Fields' : 'Show Custom Fields'}
+          </Button>
+        </div>
+      )}
       {sections.map((section) => (
         <div key={section.title}>
           <h2 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
@@ -110,20 +129,21 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
                           }}
                         />
                       </th>
+                      <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap w-12 text-center">SL NO.</th>
                       <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Name / Company</th>
                       <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Assigned</th>
                       <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Industry</th>
                       <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Contact</th>
                       <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap">Status</th>
-                      {dynamicColumns.map(col => (
-                        <th key={col} className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap text-amber-500/80">
+                      {activeCustomColumns.map(col => (
+                        <th key={col} className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider whitespace-nowrap text-amber-600 dark:text-amber-400">
                           {col}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {section.leads.map((lead) => {
+                    {section.leads.map((lead, i) => {
                       const assignee = members?.find(m => m.id === lead.assignedTo);
                       return (
                         <tr 
@@ -139,6 +159,9 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
                               checked={selectedLeadIds.includes(lead.id)}
                               onCheckedChange={() => toggleLeadSelection(lead.id)}
                             />
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground font-medium text-center">
+                            {i + 1}
                           </td>
                           <td className="px-4 py-3">
                             <div className="font-medium whitespace-nowrap">{lead.name}</div>
@@ -194,7 +217,7 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
                               {lead.status}
                             </span>
                           </td>
-                          {dynamicColumns.map(col => (
+                          {activeCustomColumns.map(col => (
                             <td key={col} className="px-4 py-3 whitespace-nowrap">
                               <span className="text-sm text-muted-foreground">
                                 {lead.customFields?.[col] ? String(lead.customFields[col]) : '-'}

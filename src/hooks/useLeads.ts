@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fetchLeads,
+  fetchDeletedLeads,
   createLead,
   updateLead,
   updateLeadStatus,
   deleteLead,
+  restoreLead,
   fetchDiscussionsByLeadId,
   createDiscussion,
   createLeadsBulk,
@@ -14,7 +16,8 @@ import {
   createInvitation,
   updateOrgMemberTeam,
   updateOrgMemberRole,
-  removeOrgMember
+  removeOrgMember,
+  updateDiscussion
 } from '@/services/api';
 import type {
   CreateLeadInput,
@@ -149,9 +152,21 @@ export function useAssignableMembers() {
 }
 
 export function useLeads() {
+  const activeOrg = useAuthStore((s) => s.activeOrg);
   return useQuery({
-    queryKey: ['leads'],
+    queryKey: ['leads', activeOrg?.id],
     queryFn: fetchLeads,
+    enabled: !!activeOrg?.id,
+    staleTime: 30_000,
+  });
+}
+
+export function useDeletedLeads() {
+  const activeOrg = useAuthStore((s) => s.activeOrg);
+  return useQuery({
+    queryKey: ['deletedLeads', activeOrg?.id],
+    queryFn: fetchDeletedLeads,
+    enabled: !!activeOrg?.id && (activeOrg.role === 'owner' || activeOrg.role === 'admin'),
     staleTime: 30_000,
   });
 }
@@ -168,19 +183,20 @@ export function useCreateLead() {
 
 export function useUpdateLead() {
   const qc = useQueryClient();
+  const activeOrg = useAuthStore((s) => s.activeOrg);
   return useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<Lead> }) =>
       updateLead(id, updates),
     onMutate: async ({ id, updates }) => {
-      await qc.cancelQueries({ queryKey: ['leads'] });
-      const prev = qc.getQueryData<Lead[]>(['leads']);
-      qc.setQueryData<Lead[]>(['leads'], (old) =>
+      await qc.cancelQueries({ queryKey: ['leads', activeOrg?.id] });
+      const prev = qc.getQueryData<Lead[]>(['leads', activeOrg?.id]);
+      qc.setQueryData<Lead[]>(['leads', activeOrg?.id], (old) =>
         old?.map((l) => (l.id === id ? { ...l, ...updates } : l)) ?? []
       );
       return { prev };
     },
     onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(['leads'], ctx.prev);
+      if (ctx?.prev) qc.setQueryData(['leads', activeOrg?.id], ctx.prev);
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['leads'] });
@@ -200,19 +216,20 @@ export function useCreateLeadsBulk() {
 
 export function useUpdateLeadStatus() {
   const qc = useQueryClient();
+  const activeOrg = useAuthStore((s) => s.activeOrg);
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: LeadStatus }) =>
       updateLeadStatus(id, status),
     onMutate: async ({ id, status }) => {
-      await qc.cancelQueries({ queryKey: ['leads'] });
-      const prev = qc.getQueryData<Lead[]>(['leads']);
-      qc.setQueryData<Lead[]>(['leads'], (old) =>
+      await qc.cancelQueries({ queryKey: ['leads', activeOrg?.id] });
+      const prev = qc.getQueryData<Lead[]>(['leads', activeOrg?.id]);
+      qc.setQueryData<Lead[]>(['leads', activeOrg?.id], (old) =>
         old?.map((l) => (l.id === id ? { ...l, status } : l)) ?? []
       );
       return { prev };
     },
     onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(['leads'], ctx.prev);
+      if (ctx?.prev) qc.setQueryData(['leads', activeOrg?.id], ctx.prev);
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['leads'] });
@@ -222,21 +239,61 @@ export function useUpdateLeadStatus() {
 
 export function useDeleteLead() {
   const qc = useQueryClient();
+  const activeOrg = useAuthStore((s) => s.activeOrg);
   return useMutation({
-    mutationFn: (id: string) => deleteLead(id),
-    onMutate: async (id) => {
-      await qc.cancelQueries({ queryKey: ['leads'] });
-      const prev = qc.getQueryData<Lead[]>(['leads']);
-      qc.setQueryData<Lead[]>(['leads'], (old) =>
-        old?.filter((l) => l.id !== id) ?? []
-      );
-      return { prev };
+    mutationFn: ({ id, permanent }: { id: string; permanent?: boolean }) => deleteLead(id, permanent),
+    onMutate: async ({ id, permanent }) => {
+      await qc.cancelQueries({ queryKey: ['leads', activeOrg?.id] });
+      await qc.cancelQueries({ queryKey: ['deletedLeads', activeOrg?.id] });
+      
+      const prev = qc.getQueryData<Lead[]>(['leads', activeOrg?.id]);
+      const prevDeleted = qc.getQueryData<Lead[]>(['deletedLeads', activeOrg?.id]);
+      
+      if (permanent) {
+        qc.setQueryData<Lead[]>(['deletedLeads', activeOrg?.id], (old) =>
+          old?.filter((l) => l.id !== id) ?? []
+        );
+      } else {
+        qc.setQueryData<Lead[]>(['leads', activeOrg?.id], (old) =>
+          old?.filter((l) => l.id !== id) ?? []
+        );
+      }
+      return { prev, prevDeleted };
     },
     onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(['leads'], ctx.prev);
+      if (ctx?.prev) qc.setQueryData(['leads', activeOrg?.id], ctx.prev);
+      if (ctx?.prevDeleted) qc.setQueryData(['deletedLeads', activeOrg?.id], ctx.prevDeleted);
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['leads'] });
+      qc.invalidateQueries({ queryKey: ['deletedLeads'] });
+    },
+  });
+}
+
+export function useRestoreLead() {
+  const qc = useQueryClient();
+  const activeOrg = useAuthStore((s) => s.activeOrg);
+  return useMutation({
+    mutationFn: (id: string) => restoreLead(id),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ['leads', activeOrg?.id] });
+      await qc.cancelQueries({ queryKey: ['deletedLeads', activeOrg?.id] });
+      
+      const prevDeleted = qc.getQueryData<Lead[]>(['deletedLeads', activeOrg?.id]);
+      
+      qc.setQueryData<Lead[]>(['deletedLeads', activeOrg?.id], (old) =>
+        old?.filter((l) => l.id !== id) ?? []
+      );
+      
+      return { prevDeleted };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prevDeleted) qc.setQueryData(['deletedLeads', activeOrg?.id], ctx.prevDeleted);
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['leads'] });
+      qc.invalidateQueries({ queryKey: ['deletedLeads'] });
     },
   });
 }
@@ -256,6 +313,18 @@ export function useCreateDiscussion() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateDiscussionInput) => createDiscussion(input),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['discussions', vars.leadId] });
+      qc.invalidateQueries({ queryKey: ['leads'] });
+    },
+  });
+}
+
+export function useUpdateDiscussion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, leadId, note, followUpAt }: { id: string, leadId: string, note: string, followUpAt: string | null }) => 
+      updateDiscussion(id, leadId, note, followUpAt),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['discussions', vars.leadId] });
       qc.invalidateQueries({ queryKey: ['leads'] });

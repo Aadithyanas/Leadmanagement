@@ -7,6 +7,9 @@ import { DiscoverPage } from '@/components/DiscoverLeads';
 import { SettingsPage } from '@/components/SettingsPage';
 import { ProfilePage } from '@/components/ProfilePage';
 import { LandingPage } from '@/components/LandingPage';
+import { SuperAdminDashboard } from '@/components/SuperAdminDashboard';
+import { TrashPage } from '@/components/TrashPage';
+import { AIAnalyticsPage } from '@/components/AIAnalyticsPage';
 import { Menu, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -67,6 +70,9 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
               {activeTab === 'discover' && <DiscoverPage />}
               {activeTab === 'profile' && <ProfilePage />}
               {activeTab === 'settings' && <SettingsPage onLogout={onLogout} />}
+              {activeTab === 'super_admin' && <SuperAdminDashboard />}
+              {activeTab === 'trash' && <TrashPage />}
+              {activeTab === 'ai_analytics' && <AIAnalyticsPage />}
             </motion.div>
           </AnimatePresence>
         </main>
@@ -83,7 +89,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
 }
 
 export default function App() {
-  const { user, setUser, activeOrg, setOrgs, setActiveOrg } = useAuthStore();
+  const { user, setUser, activeOrg, setOrgs, setActiveOrg, isSuperAdmin, setIsSuperAdmin } = useAuthStore();
   const [checking, setChecking] = useState(true);
   const [showLanding, setShowLanding] = useState(true);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
@@ -106,6 +112,14 @@ export default function App() {
         setShowLanding(false);
         
         // Fetch org to prevent flashing AuthScreen
+        const { data: superAdminData } = await supabase
+          .from('super_admins' as any)
+          .select('user_id')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        
+        setIsSuperAdmin(!!superAdminData);
+
         const { data: members } = await supabase
           .from('organization_members')
           .select('role, team_id, organizations(id, name)')
@@ -157,7 +171,7 @@ export default function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <QueryClientProvider client={queryClient}>
-        {user && activeOrg ? (
+        {user && (activeOrg || isSuperAdmin) ? (
           <AppLayout onLogout={handleLogout} />
         ) : (
           <AuthScreen onComplete={() => setShowLanding(false)} />

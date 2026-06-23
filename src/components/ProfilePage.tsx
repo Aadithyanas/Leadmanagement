@@ -329,7 +329,7 @@ export function ProfilePage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        {member.role !== 'admin' && activeOrg.role === 'owner' && (
+                        {member.role !== 'owner' && activeOrg.role === 'owner' && (
                           <div className="flex items-center gap-2">
                             <select
                               className="h-7 rounded border border-input bg-transparent px-2 text-xs max-w-[120px]"
@@ -355,12 +355,17 @@ export function ProfilePage() {
                             </select>
                           </div>
                         )}
-                        {member.role !== 'admin' && activeOrg.role !== 'owner' && member.teamName && (
+                        {member.role !== 'owner' && activeOrg.role !== 'owner' && member.teamName && (
                           <span className="px-1.5 py-0.5 bg-muted rounded border text-xs">{member.teamName}</span>
                         )}
-                        {member.role === 'admin' && (
+                        {(member.role === 'admin' || member.role === 'owner') && activeOrg.role !== 'owner' && (
                           <div className="px-2 py-1 bg-muted/50 rounded text-xs font-medium uppercase tracking-wider text-foreground border">
                             {member.role}
+                          </div>
+                        )}
+                        {member.role === 'owner' && activeOrg.role === 'owner' && (
+                          <div className="px-2 py-1 bg-primary/20 text-primary rounded text-xs font-bold uppercase tracking-wider border border-primary/30">
+                            Owner
                           </div>
                         )}
                         {(activeOrg.role === 'owner' || (activeOrg.role === 'admin' && member.role !== 'owner' && member.role !== 'admin')) && member.id !== user?.id && (

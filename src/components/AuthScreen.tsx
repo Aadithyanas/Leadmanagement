@@ -22,7 +22,7 @@ export function AuthScreen({ onComplete }: AuthScreenProps) {
   const [step, setStep] = useState<'auth' | 'create_org'>('auth');
   const [inviteOrgName, setInviteOrgName] = useState<string | null>(null);
 
-  const { setUser, setOrgs, setActiveOrg } = useAuthStore();
+  const { setUser, setOrgs, setActiveOrg, setIsSuperAdmin } = useAuthStore();
 
   useEffect(() => {
     // Check for pending invite
@@ -62,6 +62,16 @@ export function AuthScreen({ onComplete }: AuthScreenProps) {
 
   const handleUserLoggedIn = async (user: any) => {
     setUser(user);
+    
+    // Check if user is a super admin
+    const { data: superAdminData } = await supabase
+      .from('super_admins' as any)
+      .select('user_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+      
+    setIsSuperAdmin(!!superAdminData);
+
     // Check organizations
     const { data: members, error } = await supabase
       .from('organization_members')
@@ -82,6 +92,11 @@ export function AuthScreen({ onComplete }: AuthScreenProps) {
       }));
       setOrgs(orgsList);
       setActiveOrg(orgsList[0]);
+      onComplete();
+    } else if (!!superAdminData) {
+      // Super admin with no direct org memberships yet
+      setOrgs([]);
+      setActiveOrg(null);
       onComplete();
     } else {
       setStep('create_org');

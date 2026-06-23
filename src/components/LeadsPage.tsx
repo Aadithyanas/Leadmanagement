@@ -6,15 +6,15 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, Plus, FileJson, FileSpreadsheet, Keyboard, Unplug, LayoutGrid, List, Download, Trash2, X, CheckCircle2, FolderOpen } from 'lucide-react';
+import { Search, Plus, FileJson, FileSpreadsheet, Keyboard, Unplug, LayoutGrid, List, Download, Trash2, X, CheckCircle2, FolderOpen, Columns, GripVertical } from 'lucide-react';
 import type { LeadStatus } from '@/types';
 import { exportLeadsToCSV } from '@/lib/export-utils';
 import { useLeads, useFilteredLeads, useDeleteLead } from '@/hooks/useLeads';
 import { toast } from '@/hooks/useToast';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const ALL_STATUSES: (LeadStatus | 'All')[] = [
@@ -29,7 +29,7 @@ export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
     viewMode, setViewMode,
     openAddLead, setUploadJsonOpen, setUploadSheetOpen, setConnectApifyOpen,
     apifyApiKey, setActiveTab, selectedLeadIds, clearSelection,
-    isPlaylistView, setIsPlaylistView
+    isPlaylistView, setIsPlaylistView, hiddenColumns, toggleColumnVisibility, columnOrder, setColumnOrder
   } = useLeadStore();
   
   const { data: allLeads } = useLeads();
@@ -42,6 +42,18 @@ export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
     ? leads?.filter(l => selectedLeadIds.includes(l.id)) 
     : leads;
 
+  const customFieldKeys = new Set<string>();
+  (leads || []).forEach(lead => {
+    if (lead.customFields && typeof lead.customFields === 'object') {
+      Object.keys(lead.customFields).forEach(k => customFieldKeys.add(k));
+    }
+  });
+  const dynamicColumns = Array.from(customFieldKeys).sort();
+
+  const newCols = dynamicColumns.filter(c => !columnOrder.includes(c));
+  const orderedCols = columnOrder.filter(c => dynamicColumns.includes(c));
+  const displayColumns = [...orderedCols, ...newCols];
+
   const handleBulkDelete = async () => {
     if (!selectedLeadIds.length) return;
     if (!confirm(`Are you sure you want to delete ${selectedLeadIds.length} selected leads?`)) return;
@@ -49,7 +61,7 @@ export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
     try {
       // We'll delete one by one for now since the API handles IDs.
       // In a real app, we might have a /bulk-delete endpoint.
-      await Promise.all(selectedLeadIds.map(id => deleteLead.mutateAsync(id)));
+      await Promise.all(selectedLeadIds.map(id => deleteLead.mutateAsync({ id })));
       toast({ title: 'Success', description: `Deleted ${selectedLeadIds.length} leads.`, variant: 'success' });
       clearSelection();
     } catch (err: any) {
@@ -214,6 +226,43 @@ export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
           {/* View Toggle (Only in Leads View) */}
           {!isPlaylistView && (
             <div className="flex items-center rounded-md border p-1 bg-secondary/50 shrink-0">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-sm" title="Columns">
+                    <Columns className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 max-h-[60vh] overflow-y-auto">
+                  <DropdownMenuLabel>Visible Columns</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {displayColumns.length === 0 ? (
+                     <div className="p-2 text-xs text-muted-foreground text-center">No custom columns</div>
+                  ) : (
+                    <Reorder.Group axis="y" values={displayColumns} onReorder={setColumnOrder} className="flex flex-col">
+                      {displayColumns.map(col => (
+                        <Reorder.Item key={col} value={col} className="relative flex items-center group">
+                          <div className="absolute left-1 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing text-muted-foreground z-10 transition-opacity p-1">
+                            <GripVertical className="h-3 w-3" />
+                          </div>
+                          <DropdownMenuCheckboxItem
+                            className="flex-1 pl-7 cursor-pointer"
+                            checked={!hiddenColumns.includes(col)}
+                            onSelect={(e) => {
+                              e.preventDefault(); // Prevent menu from closing
+                              toggleColumnVisibility(col);
+                            }}
+                          >
+                            {col}
+                          </DropdownMenuCheckboxItem>
+                        </Reorder.Item>
+                      ))}
+                    </Reorder.Group>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <div className="w-px h-4 bg-border mx-1" />
+
               <Button
                 variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                 size="icon"

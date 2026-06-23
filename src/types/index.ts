@@ -40,6 +40,7 @@ export interface Lead {
   assignedTo?: string | null;
   sourceCategory?: string | null;
   customFields?: Record<string, string>;
+  deletedAt?: string | null;
 }
 
 export interface Discussion {
