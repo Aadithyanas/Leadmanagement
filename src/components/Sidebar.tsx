@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Compass, Settings, LogOut, Zap, User, UserX, ShieldAlert, Trash2, BrainCircuit, Calendar, ListMusic } from 'lucide-react';
+import { LayoutDashboard, Users, Compass, Settings, LogOut, Zap, User, UserX, ShieldAlert, Trash2, BrainCircuit, Calendar, ListMusic, Gamepad2 } from 'lucide-react';
 import { useLeadStore } from '@/store/useLeadStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { cn } from '@/lib/utils';
@@ -34,6 +34,7 @@ export function Sidebar({ onLogout, isOpen, onClose }: SidebarProps) {
     { id: 'discover', label: 'Discover Leads', icon: Compass },
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'snake_game', label: 'Snake Game', icon: Gamepad2 },
   ] as const;
 
   const isElevated = activeOrg?.role === 'owner' || activeOrg?.role === 'admin' || isSuperAdmin;

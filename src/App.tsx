@@ -12,6 +12,7 @@ import { LandingPage } from '@/components/LandingPage';
 import { SuperAdminDashboard } from '@/components/SuperAdminDashboard';
 import { TrashPage } from '@/components/TrashPage';
 import { AIAnalyticsPage } from '@/components/AIAnalyticsPage';
+import { SnakeGame } from '@/components/SnakeGame';
 import { Menu, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -77,6 +78,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
               {activeTab === 'super_admin' && <SuperAdminDashboard />}
               {activeTab === 'trash' && <TrashPage />}
               {activeTab === 'ai_analytics' && <AIAnalyticsPage />}
+              {activeTab === 'snake_game' && <SnakeGame />}
             </motion.div>
           </AnimatePresence>
         </main>

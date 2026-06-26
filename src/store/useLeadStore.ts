@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { LeadStatus } from '@/types';
 
-type Tab = 'dashboard' | 'leads' | 'followups' | 'playlists' | 'discover' | 'settings' | 'profile' | 'rejected' | 'super_admin' | 'trash' | 'ai_analytics';
+type Tab = 'dashboard' | 'leads' | 'followups' | 'playlists' | 'discover' | 'settings' | 'profile' | 'rejected' | 'super_admin' | 'trash' | 'ai_analytics' | 'snake_game';
 
 interface LeadStoreState {
   searchQuery: string;

@@ -291,6 +291,39 @@ export type Database = {
           }
         ]
       }
+      snake_scores: {
+        Row: {
+          id: string
+          user_id: string
+          user_name: string
+          score: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          user_name: string
+          score: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          user_name?: string
+          score?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snake_scores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+
       settings: {
         Row: {
           apify_api_key: string | null
