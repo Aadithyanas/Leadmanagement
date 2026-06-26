@@ -12,19 +12,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Search, Plus, FileJson, FileSpreadsheet, Keyboard, Unplug, LayoutGrid, List, Download, Trash2, X, CheckCircle2, FolderOpen, Columns, GripVertical } from 'lucide-react';
 import type { LeadStatus } from '@/types';
 import { exportLeadsToCSV } from '@/lib/export-utils';
-import { useLeads, useFilteredLeads, useDeleteLead } from '@/hooks/useLeads';
+import { useLeads, useFilteredLeads, useDeleteLead, useAssignableMembers, usePlaylists } from '@/hooks/useLeads';
+import { useAuthStore } from '@/store/useAuthStore';
 import { toast } from '@/hooks/useToast';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const ALL_STATUSES: (LeadStatus | 'All')[] = [
-  'All', 'New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost',
+  'All', 'New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost', 'Rejected', 'Visited',
 ];
 
 export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
   const {
     searchQuery, setSearchQuery,
     statusFilter, setStatusFilter,
+    assigneeFilter, setAssigneeFilter,
     sourceCategoryFilter, setSourceCategoryFilter,
     viewMode, setViewMode,
     openAddLead, setUploadJsonOpen, setUploadSheetOpen, setConnectApifyOpen,
@@ -34,9 +36,37 @@ export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
   
   const { data: allLeads } = useLeads();
   const { data: leads } = useFilteredLeads();
+  const { data: playlists } = usePlaylists();
   const deleteLead = useDeleteLead();
+  const assignableMembers = useAssignableMembers();
+  const { user, activeOrg } = useAuthStore();
+
+  const isPrivileged = activeOrg?.role === 'owner' || activeOrg?.role === 'admin' || activeOrg?.role === 'hr' || activeOrg?.role === 'leader';
+
+  const visiblePlaylists = (playlists || []).filter(p => {
+    if (isPrivileged) return true;
+    if (p.createdBy === user?.id) return true;
+    return (allLeads || []).some(l => l.playlistId === p.id && l.assignedTo === user?.id);
+  });
 
   const uniqueCategories = Array.from(new Set((allLeads || []).map(l => l.sourceCategory).filter(Boolean)));
+
+  const playlistCards = [
+    ...(visiblePlaylists || []).map(p => ({
+      id: `playlist:${p.id}`,
+      name: p.name,
+      type: 'Vibe Sheet (Playlist)',
+      count: allLeads?.filter(l => l.playlistId === p.id).length || 0,
+      filterValue: `playlist:${p.id}`
+    })),
+    ...uniqueCategories.map(cat => ({
+      id: `category:${cat}`,
+      name: cat,
+      type: 'Imported Sheet',
+      count: allLeads?.filter(l => l.sourceCategory === cat).length || 0,
+      filterValue: cat
+    }))
+  ];
 
   const leadsToExport = selectedLeadIds.length > 0 
     ? leads?.filter(l => selectedLeadIds.includes(l.id)) 
@@ -167,25 +197,42 @@ export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
         <div className="h-8 w-px bg-border hidden sm:block mx-1" />
 
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto px-2">
-          {/* Status Filter */}
-          {!isRejectedView && (
-            <>
-              {uniqueCategories.length > 0 && (
-                <Select
-                  value={sourceCategoryFilter}
-                  onValueChange={(v) => setSourceCategoryFilter(v)}
-                >
-                  <SelectTrigger className="w-[160px] border-none bg-transparent hover:bg-muted/50 focus:ring-0">
-                    <SelectValue placeholder="Sheet / Playlist" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All Sheets</SelectItem>
+          {/* Sheet / Playlist Filter */}
+          {!isRejectedView && ((uniqueCategories && uniqueCategories.length > 0) || (visiblePlaylists && visiblePlaylists.length > 0)) && (
+            <Select
+              value={sourceCategoryFilter}
+              onValueChange={(v) => setSourceCategoryFilter(v)}
+            >
+              <SelectTrigger className="w-[180px] border-none bg-transparent hover:bg-muted/50 focus:ring-0">
+                <SelectValue placeholder="Sheet / Playlist" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Sheets & Playlists</SelectItem>
+                
+                {visiblePlaylists && visiblePlaylists.length > 0 && (
+                  <>
+                    <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/20 my-1 rounded-sm select-none font-sans">Playlists</div>
+                    {visiblePlaylists.map((p) => (
+                      <SelectItem key={p.id} value={`playlist:${p.id}`}>{p.name}</SelectItem>
+                    ))}
+                  </>
+                )}
+                
+                {uniqueCategories && uniqueCategories.length > 0 && (
+                  <>
+                    <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/20 my-1 rounded-sm select-none font-sans">Imported Sheets</div>
                     {uniqueCategories.map((cat: any) => (
                       <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                     ))}
-                  </SelectContent>
-                </Select>
-              )}
+                  </>
+                )}
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* Status Filter */}
+          {!isRejectedView && (
+            <>
               
               <Select
                 value={statusFilter}
@@ -200,6 +247,24 @@ export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
                   ))}
                 </SelectContent>
               </Select>
+
+              {activeOrg && ['leader', 'hr', 'admin', 'owner'].includes(activeOrg.role) && assignableMembers.length > 0 && (
+                <Select
+                  value={assigneeFilter}
+                  onValueChange={(v) => setAssigneeFilter(v)}
+                >
+                  <SelectTrigger id="filter-assignee" className="w-[160px] border-none bg-transparent hover:bg-muted/50 focus:ring-0">
+                    <SelectValue placeholder="Team Member" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Members</SelectItem>
+                    <SelectItem value="Unassigned">Unassigned</SelectItem>
+                    {assignableMembers.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.name || m.email}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </>
           )}
 
@@ -288,34 +353,33 @@ export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
 
       {isPlaylistView ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {uniqueCategories.length === 0 ? (
+          {playlistCards.length === 0 ? (
             <div className="col-span-full py-12 text-center text-muted-foreground border border-dashed rounded-lg">
               <FolderOpen className="h-12 w-12 mx-auto mb-3 opacity-20" />
-              <p>No playlists available yet.</p>
-              <p className="text-sm">Upload a CSV sheet to automatically create a playlist.</p>
+              <p>No sheets or playlists available yet.</p>
+              <p className="text-sm">Create a Vibe Sheet or upload a CSV sheet to see them here.</p>
             </div>
           ) : (
-            uniqueCategories.map((cat: any) => {
-              const count = allLeads?.filter(l => l.sourceCategory === cat).length || 0;
+            playlistCards.map((card) => {
               return (
                 <Card 
-                  key={cat} 
+                  key={card.id} 
                   className="cursor-pointer hover:border-primary/50 transition-colors group"
                   onClick={() => {
-                    setSourceCategoryFilter(cat);
+                    setSourceCategoryFilter(card.filterValue);
                     setIsPlaylistView(false);
                   }}
                 >
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base group-hover:text-primary transition-colors line-clamp-1" title={cat}>
-                      {cat}
+                    <CardTitle className="text-base group-hover:text-primary transition-colors line-clamp-1" title={card.name}>
+                      {card.name}
                     </CardTitle>
-                    <CardDescription>Imported Sheet</CardDescription>
+                    <CardDescription>{card.type}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Total Leads:</span>
-                      <span className="font-semibold bg-secondary px-2 py-0.5 rounded text-xs">{count}</span>
+                      <span className="font-semibold bg-secondary px-2 py-0.5 rounded text-xs">{card.count}</span>
                     </div>
                   </CardContent>
                 </Card>

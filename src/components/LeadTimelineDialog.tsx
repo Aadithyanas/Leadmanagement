@@ -21,7 +21,7 @@ import { AIEmailDialog, type EmailType } from '@/components/AIEmailDialog';
 import { scoreLeadQuality } from '@/lib/ai-service';
 import type { LeadStatus, Lead } from '@/types';
 
-const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost', 'Rejected'];
+const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost', 'Rejected', 'Visited'];
 
 export function LeadTimelineDialog() {
   const { isTimelineOpen, closeTimeline, selectedLeadId, openEditLead, columnOrder } = useLeadStore();

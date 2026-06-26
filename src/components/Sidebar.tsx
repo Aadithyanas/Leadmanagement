@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Compass, Settings, LogOut, Zap, User, UserX, ShieldAlert, Trash2, BrainCircuit } from 'lucide-react';
+import { LayoutDashboard, Users, Compass, Settings, LogOut, Zap, User, UserX, ShieldAlert, Trash2, BrainCircuit, Calendar, ListMusic } from 'lucide-react';
 import { useLeadStore } from '@/store/useLeadStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,8 @@ export function Sidebar({ onLogout, isOpen, onClose }: SidebarProps) {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'leads', label: 'Leads', icon: Users },
+    { id: 'followups', label: 'Follow-Ups', icon: Calendar },
+    { id: 'playlists', label: 'Vibe Sheets', icon: ListMusic },
     { id: 'rejected', label: 'Rejected Leads', icon: UserX },
     { id: 'discover', label: 'Discover Leads', icon: Compass },
     { id: 'profile', label: 'Profile', icon: User },

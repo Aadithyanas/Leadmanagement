@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Sidebar } from '@/components/Sidebar';
 import { DashboardOverview } from '@/components/DashboardOverview';
 import { LeadsPage } from '@/components/LeadsPage';
+import { FollowUpsPage } from '@/components/FollowUpsPage';
+import { PlaylistsPage } from '@/components/PlaylistsPage';
 import { DiscoverPage } from '@/components/DiscoverLeads';
 import { SettingsPage } from '@/components/SettingsPage';
 import { ProfilePage } from '@/components/ProfilePage';
@@ -66,6 +68,8 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
             >
               {activeTab === 'dashboard' && <DashboardOverview />}
               {activeTab === 'leads' && <LeadsPage />}
+              {activeTab === 'followups' && <FollowUpsPage />}
+              {activeTab === 'playlists' && <PlaylistsPage />}
               {activeTab === 'rejected' && <LeadsPage isRejectedView />}
               {activeTab === 'discover' && <DiscoverPage />}
               {activeTab === 'profile' && <ProfilePage />}

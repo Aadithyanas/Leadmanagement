@@ -69,7 +69,8 @@ export function AddLeadDialog() {
         websiteUrl: form.websiteUrl.trim(),
         requirements: form.requirements.trim(),
         assignedTo: form.assignedTo || user?.id,
-        sourceCategory: sourceCategoryFilter !== 'All' ? sourceCategoryFilter : 'Manual',
+        sourceCategory: sourceCategoryFilter !== 'All' && !sourceCategoryFilter.startsWith('playlist:') ? sourceCategoryFilter : 'Manual',
+        playlistId: sourceCategoryFilter.startsWith('playlist:') ? sourceCategoryFilter.replace('playlist:', '') : null,
         customFields: customFields.reduce((acc, curr) => {
           if (curr.key.trim() && curr.value.trim()) acc[curr.key.trim()] = curr.value.trim();
           return acc;

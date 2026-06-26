@@ -13,7 +13,7 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
   const [showCustomFields, setShowCustomFields] = useState(false);
   const { data: leads, isLoading } = useFilteredLeads();
   const { data: members } = useOrgMembers();
-  const { searchQuery, statusFilter, sourceCategoryFilter, viewMode, openTimeline, selectedLeadIds, toggleLeadSelection, setSelectedLeadIds, hiddenColumns, columnOrder } = useLeadStore();
+  const { searchQuery, statusFilter, assigneeFilter, sourceCategoryFilter, viewMode, openTimeline, selectedLeadIds, toggleLeadSelection, setSelectedLeadIds, hiddenColumns, columnOrder } = useLeadStore();
 
   if (isLoading) {
     return (
@@ -51,6 +51,14 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
         (l.company || '').toLowerCase().includes(q) ||
         (l.email || '').toLowerCase().includes(q)
     );
+  }
+  
+  if (assigneeFilter !== 'All') {
+    if (assigneeFilter === 'Unassigned') {
+      filtered = filtered.filter(l => !l.assignedTo);
+    } else {
+      filtered = filtered.filter(l => l.assignedTo === assigneeFilter);
+    }
   }
 
   const customFieldKeys = new Set<string>();
@@ -212,6 +220,7 @@ export function LeadList({ isRejectedView }: { isRejectedView?: boolean }) {
                               lead.status === 'Proposal Sent' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' :
                               lead.status === 'Won' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
                               lead.status === 'Rejected' ? 'bg-stone-100 text-stone-800 dark:bg-stone-900/30 dark:text-stone-300' :
+                              lead.status === 'Visited' ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300' :
                               'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
                             }`}>
                               {lead.status}
