@@ -1,6 +1,6 @@
 /**
  * Amplify Data Schema (Gen 2)
- * 
+
  * This defines the GraphQL schema for the LeadFlow application.
  * When using Amplify Gen 2, place this in amplify/data/resource.ts
  * 
