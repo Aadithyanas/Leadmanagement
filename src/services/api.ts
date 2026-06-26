@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Lead, Discussion, CreateLeadInput, CreateDiscussionInput, LeadStatus } from '@/types';
+import type { Lead, Discussion, CreateLeadInput, CreateDiscussionInput, LeadStatus, Playlist } from '@/types';
 import type { Database } from '../types/supabase';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -11,6 +11,10 @@ export interface GlobalSettings {
   notificationEmail: string;
   enableNotifications: boolean;
   apifyApiKey: string;
+  companyName?: string;
+  companyEmail?: string;
+  companyPhone?: string;
+  companyWebsite?: string;
 }
 
 const getOrgId = () => {
@@ -37,8 +41,10 @@ function mapLeadFromDb(db: DbLead): Lead {
     updatedAt: db.updated_at || new Date().toISOString(),
     assignedTo: db.assigned_to,
     sourceCategory: db.source_category,
+    playlistId: db.playlist_id,
     customFields: (db.custom_fields as Record<string, string>) || {},
     deletedAt: db.deleted_at,
+    deletedBy: db.deleted_by,
   };
 }
 
@@ -209,6 +215,16 @@ export async function consumeInvitation(token: string): Promise<{ orgId: string,
   return { orgId: inv.org_id, role: inv.role, teamId: inv.team_id };
 }
 
+export function mapPlaylistFromDb(db: any): Playlist {
+  return {
+    id: db.id,
+    orgId: db.org_id,
+    name: db.name,
+    createdAt: db.created_at,
+    createdBy: db.created_by,
+  };
+}
+
 export async function fetchLeads(): Promise<Lead[]> {
   const org = useAuthStore.getState().activeOrg;
   const user = useAuthStore.getState().user;
@@ -263,12 +279,9 @@ export async function fetchDeletedLeads(): Promise<Lead[]> {
   const { data, error } = await supabase
     .from('leads')
     .select('*')
-    .eq('org_id', org.id)
-    // .not('deleted_at', 'is', null) // Removed to prevent crash before migration
-    // .order('deleted_at', { ascending: false });
+    .eq('org_id', org.id);
 
   if (error) {
-    // If column doesn't exist, this might throw but the fallback will catch it
     if (error.message.includes('deleted_at')) return [];
     throw new Error(error.message);
   }
@@ -309,6 +322,7 @@ export async function createLead(input: CreateLeadInput): Promise<Lead> {
       requirements: input.requirements,
       assigned_to: input.assignedTo || null,
       source_category: input.sourceCategory || null,
+      playlist_id: input.playlistId || null,
       custom_fields: input.customFields || {},
     })
     .select()
@@ -333,6 +347,8 @@ export async function updateLead(id: string, updates: Partial<Lead>): Promise<Le
   if (updates.lastDiscussion !== undefined) payload.last_discussion = updates.lastDiscussion;
   if (updates.followUpAt !== undefined) payload.follow_up_at = updates.followUpAt;
   if (updates.assignedTo !== undefined) payload.assigned_to = updates.assignedTo;
+  if (updates.sourceCategory !== undefined) payload.source_category = updates.sourceCategory;
+  if (updates.playlistId !== undefined) payload.playlist_id = updates.playlistId;
   if (updates.customFields !== undefined) payload.custom_fields = updates.customFields;
 
   const { data, error } = await supabase
@@ -353,7 +369,8 @@ export async function updateLeadStatus(id: string, status: LeadStatus): Promise<
 
 export async function deleteLead(id: string, permanent: boolean = false): Promise<void> {
   const org = useAuthStore.getState().activeOrg;
-  if (!org) throw new Error('Not logged in');
+  const user = useAuthStore.getState().user;
+  if (!org || !user) throw new Error('Not logged in');
 
   const orgId = org.id;
   
@@ -372,7 +389,7 @@ export async function deleteLead(id: string, permanent: boolean = false): Promis
     // Soft delete
     const { error } = await supabase
       .from('leads')
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ deleted_at: new Date().toISOString(), deleted_by: user.id })
       .eq('org_id', orgId)
       .eq('id', id);
 
@@ -390,7 +407,7 @@ export async function restoreLead(id: string): Promise<void> {
 
   const { error } = await supabase
     .from('leads')
-    .update({ deleted_at: null })
+    .update({ deleted_at: null, deleted_by: null })
     .eq('org_id', org.id)
     .eq('id', id);
 
@@ -427,7 +444,7 @@ export async function createDiscussion(input: CreateDiscussionInput): Promise<Di
   
   await updateLead(input.leadId, {
     lastDiscussion: input.note,
-    followUpAt: input.followUpAt || undefined,
+    followUpAt: input.followUpAt !== undefined ? input.followUpAt : undefined,
   });
 
   return mapDiscussionFromDb(data);
@@ -451,7 +468,7 @@ export async function updateDiscussion(id: string, leadId: string, note: string,
   // also sync to the lead
   await updateLead(leadId, {
     lastDiscussion: note,
-    followUpAt: followUpAt || undefined,
+    followUpAt: followUpAt !== undefined ? followUpAt : undefined,
   });
 
   return mapDiscussionFromDb(data);
@@ -474,6 +491,10 @@ export async function fetchSettings(): Promise<GlobalSettings> {
     notificationEmail: data.notification_email || '',
     enableNotifications: data.enable_notifications || false,
     apifyApiKey: data.apify_api_key || '',
+    companyName: data.company_name || '',
+    companyEmail: data.company_email || '',
+    companyPhone: data.company_phone || '',
+    companyWebsite: data.company_website || '',
   };
 }
 
@@ -486,6 +507,10 @@ export async function updateSettings(updates: Partial<GlobalSettings>): Promise<
     notification_email: updates.notificationEmail ?? current.notificationEmail,
     enable_notifications: updates.enableNotifications ?? current.enableNotifications,
     apify_api_key: updates.apifyApiKey ?? current.apifyApiKey,
+    company_name: updates.companyName ?? current.companyName,
+    company_email: updates.companyEmail ?? current.companyEmail,
+    company_phone: updates.companyPhone ?? current.companyPhone,
+    company_website: updates.companyWebsite ?? current.companyWebsite,
   };
 
   if (current.id) {
@@ -518,6 +543,50 @@ export async function updateSettings(updates: Partial<GlobalSettings>): Promise<
   }
 }
 
+export async function fetchPlaylists(): Promise<Playlist[]> {
+  const org = useAuthStore.getState().activeOrg;
+  if (!org) throw new Error('Not logged in');
+
+  const { data, error } = await supabase
+    .from('playlists')
+    .select('*')
+    .eq('org_id', org.id)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data || []).map(mapPlaylistFromDb);
+}
+
+export async function createPlaylist(name: string): Promise<Playlist> {
+  const org = useAuthStore.getState().activeOrg;
+  if (!org) throw new Error('Not logged in');
+
+  const { data, error } = await supabase
+    .from('playlists')
+    .insert({
+      org_id: org.id,
+      name,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return mapPlaylistFromDb(data);
+}
+
+export async function deletePlaylist(id: string): Promise<void> {
+  const org = useAuthStore.getState().activeOrg;
+  if (!org) throw new Error('Not logged in');
+
+  const { error } = await supabase
+    .from('playlists')
+    .delete()
+    .eq('org_id', org.id)
+    .eq('id', id);
+
+  if (error) throw new Error(error.message);
+}
+
 export async function createLeadsBulk(leads: CreateLeadInput[]): Promise<{ message: string; count: number }> {
   const orgId = getOrgId();
   const payload = leads.map(l => ({
@@ -533,6 +602,7 @@ export async function createLeadsBulk(leads: CreateLeadInput[]): Promise<{ messa
     requirements: l.requirements,
     assigned_to: l.assignedTo || null,
     source_category: l.sourceCategory || null,
+    playlist_id: l.playlistId || null,
     custom_fields: l.customFields || {},
   }));
 

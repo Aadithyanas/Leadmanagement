@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import type { LeadStatus } from '@/types';
 
-type Tab = 'dashboard' | 'leads' | 'discover' | 'settings' | 'profile' | 'rejected' | 'super_admin' | 'trash' | 'ai_analytics';
+type Tab = 'dashboard' | 'leads' | 'followups' | 'playlists' | 'discover' | 'settings' | 'profile' | 'rejected' | 'super_admin' | 'trash' | 'ai_analytics';
 
 interface LeadStoreState {
   searchQuery: string;
   statusFilter: LeadStatus | 'All';
+  assigneeFilter: string | 'All';
   sourceCategoryFilter: string | 'All';
   viewMode: 'grid' | 'table';
   activeTab: Tab;
@@ -25,9 +26,11 @@ interface LeadStoreState {
   isPlaylistView: boolean;
   hiddenColumns: string[];
   columnOrder: string[];
+  selectedFollowUpDate: Date | null;
 
   setSearchQuery: (q: string) => void;
   setStatusFilter: (s: LeadStatus | 'All') => void;
+  setAssigneeFilter: (s: string | 'All') => void;
   setSourceCategoryFilter: (s: string | 'All') => void;
   setViewMode: (mode: 'grid' | 'table') => void;
   setActiveTab: (tab: Tab) => void;
@@ -50,11 +53,13 @@ interface LeadStoreState {
   setIsPlaylistView: (val: boolean) => void;
   toggleColumnVisibility: (col: string) => void;
   setColumnOrder: (order: string[]) => void;
+  setSelectedFollowUpDate: (date: Date | null) => void;
 }
 
 export const useLeadStore = create<LeadStoreState>((set) => ({
   searchQuery: '',
   statusFilter: 'All',
+  assigneeFilter: 'All',
   sourceCategoryFilter: 'All',
   viewMode: 'grid',
   activeTab: 'dashboard',
@@ -74,9 +79,11 @@ export const useLeadStore = create<LeadStoreState>((set) => ({
   isPlaylistView: false,
   hiddenColumns: JSON.parse(localStorage.getItem('leadflow_hidden_columns') || '[]'),
   columnOrder: JSON.parse(localStorage.getItem('leadflow_column_order') || '[]'),
+  selectedFollowUpDate: new Date(),
 
   setSearchQuery: (q) => set({ searchQuery: q }),
   setStatusFilter: (s) => set({ statusFilter: s }),
+  setAssigneeFilter: (s) => set({ assigneeFilter: s }),
   setSourceCategoryFilter: (s) => set({ sourceCategoryFilter: s }),
   setViewMode: (mode) => set({ viewMode: mode }),
   setActiveTab: (tab) => set({ activeTab: tab }),
@@ -125,4 +132,5 @@ export const useLeadStore = create<LeadStoreState>((set) => ({
     localStorage.setItem('leadflow_column_order', JSON.stringify(order));
     set({ columnOrder: order });
   },
+  setSelectedFollowUpDate: (date) => set({ selectedFollowUpDate: date }),
 }));

@@ -5,7 +5,8 @@ export type LeadStatus =
   | 'Proposal Sent'
   | 'Won'
   | 'Lost'
-  | 'Rejected';
+  | 'Rejected'
+  | 'Visited';
 
 export type Industry =
   | 'Restaurant'
@@ -39,8 +40,18 @@ export interface Lead {
   owner?: string;
   assignedTo?: string | null;
   sourceCategory?: string | null;
+  playlistId?: string | null;
   customFields?: Record<string, string>;
   deletedAt?: string | null;
+  deletedBy?: string | null;
+}
+
+export interface Playlist {
+  id: string;
+  orgId: string;
+  name: string;
+  createdAt: string;
+  createdBy?: string | null;
 }
 
 export interface Discussion {
@@ -69,6 +80,7 @@ export interface CreateLeadInput {
   requirements?: string;
   assignedTo?: string | null;
   sourceCategory?: string | null;
+  playlistId?: string | null;
   customFields?: Record<string, string>;
 }
 

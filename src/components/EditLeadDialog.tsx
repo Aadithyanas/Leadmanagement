@@ -22,7 +22,7 @@ const INDUSTRIES: Industry[] = [
 ];
 
 const STATUSES: LeadStatus[] = [
-  'New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost'
+  'New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost', 'Rejected', 'Visited'
 ];
 
 export function EditLeadDialog() {

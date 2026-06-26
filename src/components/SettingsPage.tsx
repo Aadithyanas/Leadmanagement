@@ -24,6 +24,12 @@ export function SettingsPage({ onLogout }: { onLogout?: () => void }) {
   const [keyInput, setKeyInput] = useState(apifyApiKey);
   const [emailInput, setEmailInput] = useState(notificationEmail);
   const [notifEnabled, setNotifEnabled] = useState(enableNotifications);
+  
+  const [companyName, setCompanyName] = useState('');
+  const [companyEmail, setCompanyEmail] = useState('');
+  const [companyPhone, setCompanyPhone] = useState('');
+  const [companyWebsite, setCompanyWebsite] = useState('');
+  
   const { isInstallable, installPWA } = usePWAInstall();
   
   const [isSaving, setIsSaving] = useState(false);
@@ -40,6 +46,10 @@ export function SettingsPage({ onLogout }: { onLogout?: () => void }) {
       setKeyInput(settings.apifyApiKey);
       setEmailInput(email);
       setNotifEnabled(settings.enableNotifications);
+      setCompanyName(settings.companyName || '');
+      setCompanyEmail(settings.companyEmail || '');
+      setCompanyPhone(settings.companyPhone || '');
+      setCompanyWebsite(settings.companyWebsite || '');
     });
   }, [activeOrg, user]);
 
@@ -49,7 +59,11 @@ export function SettingsPage({ onLogout }: { onLogout?: () => void }) {
       await updateSettings({
         apifyApiKey: keyInput,
         notificationEmail: emailInput,
-        enableNotifications: notifEnabled
+        enableNotifications: notifEnabled,
+        companyName,
+        companyEmail,
+        companyPhone,
+        companyWebsite
       });
       
       setApifyApiKey(keyInput);
@@ -128,7 +142,68 @@ export function SettingsPage({ onLogout }: { onLogout?: () => void }) {
         </div>
       </div>
 
-
+      <div className="border rounded-lg bg-card overflow-hidden">
+        <div className="border-b p-6 bg-muted/20">
+          <div className="flex items-center gap-3 mb-1">
+            <Users className="h-5 w-5 text-blue-500" />
+            <h2 className="text-lg font-semibold">Company Profile</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">This information will be used in AI-generated emails and proposals.</p>
+        </div>
+        
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="company-name">Company Name</Label>
+              <Input 
+                id="company-name"
+                placeholder="e.g. Acme Corp" 
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                disabled={!isAdmin}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="company-email">Company Email</Label>
+              <Input 
+                id="company-email"
+                type="email"
+                placeholder="hello@acmecorp.com" 
+                value={companyEmail}
+                onChange={(e) => setCompanyEmail(e.target.value)}
+                disabled={!isAdmin}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="company-phone">Company Phone</Label>
+              <Input 
+                id="company-phone"
+                placeholder="+1 (555) 000-0000" 
+                value={companyPhone}
+                onChange={(e) => setCompanyPhone(e.target.value)}
+                disabled={!isAdmin}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="company-website">Company Website</Label>
+              <Input 
+                id="company-website"
+                placeholder="https://acmecorp.com" 
+                value={companyWebsite}
+                onChange={(e) => setCompanyWebsite(e.target.value)}
+                disabled={!isAdmin}
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-end pt-2">
+            <Button onClick={handleSave} disabled={isSaving}>
+              <Save className="h-4 w-4 mr-2" />
+              {isSaving ? 'Saving...' : 'Save Profile'}
+            </Button>
+          </div>
+        </div>
+      </div>
 
       <div className="border rounded-lg bg-card overflow-hidden">
         <div className="border-b p-6 bg-muted/20">
@@ -180,7 +255,7 @@ export function SettingsPage({ onLogout }: { onLogout?: () => void }) {
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <Button 
               onClick={handleSave} 
-              disabled={isSaving || (keyInput === apifyApiKey && emailInput === notificationEmail && notifEnabled === enableNotifications)}
+              disabled={isSaving}
               className="flex-1"
             >
               <Save className="h-4 w-4 mr-2" />

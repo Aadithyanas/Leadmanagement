@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useDeletedLeads, useDeleteLead, useRestoreLead } from '@/hooks/useLeads';
-import { Loader2, Trash2, RefreshCcw, Inbox } from 'lucide-react';
+import { useDeletedLeads, useDeleteLead, useRestoreLead, useOrgMembers } from '@/hooks/useLeads';
+import { Loader2, Trash2, RefreshCcw, Inbox, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/useToast';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -8,6 +8,7 @@ import { formatDate } from '@/lib/date-utils';
 
 export function TrashPage() {
   const { data: leads, isLoading } = useDeletedLeads();
+  const { data: members } = useOrgMembers();
   const deleteLead = useDeleteLead();
   const restoreLead = useRestoreLead();
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
@@ -71,12 +72,15 @@ export function TrashPage() {
               <tr>
                 <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Name / Company</th>
                 <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Deleted On</th>
+                <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Deleted By</th>
                 <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3 font-medium text-[11px] uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {leads.map((lead) => (
+              {leads.map((lead) => {
+                const deletedByUser = members?.find(m => m.id === lead.deletedBy);
+                return (
                 <tr key={lead.id} className="hover:bg-accent/50 transition-colors">
                   <td className="px-4 py-3">
                     <div className="font-medium text-muted-foreground line-through">{lead.name}</div>
@@ -84,6 +88,12 @@ export function TrashPage() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                     {lead.deletedAt ? formatDate(lead.deletedAt) : 'Unknown'}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <User className="h-3.5 w-3.5 opacity-70" />
+                      {deletedByUser ? deletedByUser.name : 'Unknown User'}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="opacity-60">
@@ -119,7 +129,7 @@ export function TrashPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>

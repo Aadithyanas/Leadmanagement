@@ -11,7 +11,7 @@ import { useLeadStore } from '@/store/useLeadStore';
 import type { LeadStatus } from '@/types';
 
 const ALL_STATUSES: (LeadStatus | 'All')[] = [
-  'All', 'New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost',
+  'All', 'New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost', 'Rejected', 'Visited',
 ];
 
 interface HeaderProps {

@@ -219,7 +219,7 @@ export function UploadSheetDialog() {
       const newLeads: CreateLeadInput[] = csvData.map(row => {
         const val = (key: string) => (mapping[key] ? row[mapping[key]] || '' : '');
         
-        const VALID_STATUSES = ['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost', 'Rejected'];
+        const VALID_STATUSES = ['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Won', 'Lost', 'Rejected', 'Visited'];
         const VALID_INDUSTRIES = ['Restaurant', 'Food & Beverage', 'Retail', 'Healthcare', 'Technology', 'Education', 'Real Estate', 'Finance', 'Manufacturing', 'E-Commerce', 'Hospitality', 'Other'];
 
         const rawStatus = val('status').trim();

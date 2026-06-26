@@ -3,7 +3,9 @@ import { Lead } from '@/types';
 export async function generateProposalEmail(
   apiKey: string,
   lead: Lead,
-  prompt: string
+  prompt: string,
+  senderName: string,
+  orgProfile: any
 ): Promise<string> {
   if (!apiKey) {
     throw new Error('OpenRouter API key is missing. Please add it in Settings.');
@@ -12,8 +14,15 @@ export async function generateProposalEmail(
   const systemMessage = `You are an expert sales representative. Your goal is to write a highly professional, persuasive, and concise proposal email to a potential client.
 You will be provided with the lead's details and the specific points/offer the user wants to include.
 Format the email cleanly with a clear subject line. If the user provides a link or drive link, incorporate it naturally.
-Do NOT include any placeholder text like [Your Name] or [Your Company] if you can avoid it, try to make it ready-to-send based on the user's input.
-CRITICAL FORMATTING INSTRUCTION: DO NOT use any Markdown formatting like **asterisks for bold** or # hashes for headers. Output plain text ONLY. Use standard line breaks and dashes (-) for bullet points.`;
+Do NOT include any placeholder text like [Your Name] or [Your Company].
+CRITICAL FORMATTING INSTRUCTION: DO NOT use any Markdown formatting like **asterisks for bold** or # hashes for headers. Output plain text ONLY. Use standard line breaks and dashes (-) for bullet points.
+
+Use the following details for the sender's signature at the end of the email:
+${senderName}
+${orgProfile.companyName || ''}
+${orgProfile.companyEmail ? `Email: ${orgProfile.companyEmail}` : ''}
+${orgProfile.companyPhone ? `Phone: ${orgProfile.companyPhone}` : ''}
+${orgProfile.companyWebsite ? `Website: ${orgProfile.companyWebsite}` : ''}`;
 
   const userMessage = `
 Lead Name: ${lead.name}
@@ -62,13 +71,22 @@ Please write the email. Include a "Subject: " line at the top.
 export async function generateWelcomeEmail(
   apiKey: string,
   lead: Lead,
-  prompt: string
+  prompt: string,
+  senderName: string,
+  orgProfile: any
 ): Promise<string> {
   if (!apiKey) throw new Error('OpenRouter API key is missing.');
 
   const systemMessage = `You are an expert sales representative. Your goal is to write a highly professional, friendly, and concise welcome/introductory email to a new lead.
-Do NOT include any placeholder text like [Your Name] or [Your Company] if you can avoid it.
-CRITICAL FORMATTING INSTRUCTION: DO NOT use any Markdown formatting like **asterisks for bold** or # hashes for headers. Output plain text ONLY. Use standard line breaks.`;
+Do NOT include any placeholder text like [Your Name] or [Your Company].
+CRITICAL FORMATTING INSTRUCTION: DO NOT use any Markdown formatting like **asterisks for bold** or # hashes for headers. Output plain text ONLY. Use standard line breaks.
+
+Use the following details for the sender's signature at the end of the email:
+${senderName}
+${orgProfile.companyName || ''}
+${orgProfile.companyEmail ? `Email: ${orgProfile.companyEmail}` : ''}
+${orgProfile.companyPhone ? `Phone: ${orgProfile.companyPhone}` : ''}
+${orgProfile.companyWebsite ? `Website: ${orgProfile.companyWebsite}` : ''}`;
 
   const userMessage = `
 Lead Name: ${lead.name}
@@ -110,14 +128,23 @@ Please write the email. Include a "Subject: " line at the top.
 export async function generateFollowUpEmail(
   apiKey: string,
   lead: Lead,
-  prompt: string
+  prompt: string,
+  senderName: string,
+  orgProfile: any
 ): Promise<string> {
   if (!apiKey) throw new Error('OpenRouter API key is missing.');
 
   const systemMessage = `You are an expert sales representative. Your goal is to write a highly professional, concise follow-up email to a lead who hasn't responded recently.
 Be polite and offer value without being pushy.
-Do NOT include any placeholder text if you can avoid it.
-CRITICAL FORMATTING INSTRUCTION: DO NOT use any Markdown formatting like **asterisks for bold** or # hashes for headers. Output plain text ONLY.`;
+Do NOT include any placeholder text.
+CRITICAL FORMATTING INSTRUCTION: DO NOT use any Markdown formatting like **asterisks for bold** or # hashes for headers. Output plain text ONLY.
+
+Use the following details for the sender's signature at the end of the email:
+${senderName}
+${orgProfile.companyName || ''}
+${orgProfile.companyEmail ? `Email: ${orgProfile.companyEmail}` : ''}
+${orgProfile.companyPhone ? `Phone: ${orgProfile.companyPhone}` : ''}
+${orgProfile.companyWebsite ? `Website: ${orgProfile.companyWebsite}` : ''}`;
 
   const userMessage = `
 Lead Name: ${lead.name}

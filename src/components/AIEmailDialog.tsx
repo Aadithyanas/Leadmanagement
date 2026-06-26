@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
 } from '@/components/ui/dialog';
@@ -8,6 +8,8 @@ import { useLeadStore } from '@/store/useLeadStore';
 import { toast } from '@/hooks/useToast';
 import { Loader2, Wand2, Copy, Mail, Check } from 'lucide-react';
 import { generateProposalEmail, generateWelcomeEmail, generateFollowUpEmail } from '@/lib/ai-service';
+import { useAuthStore } from '@/store/useAuthStore';
+import { fetchSettings } from '@/services/api';
 import type { Lead } from '@/types';
 
 export type EmailType = 'proposal' | 'welcome' | 'followup';
@@ -48,6 +50,13 @@ export function AIEmailDialog({ open, onOpenChange, lead, type, onComplete }: AI
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [followUpAt, setFollowUpAt] = useState('');
+  
+  const { user } = useAuthStore();
+  const [orgProfile, setOrgProfile] = useState<any>(null);
+  
+  useEffect(() => {
+    fetchSettings().then(settings => setOrgProfile(settings)).catch(console.error);
+  }, []);
 
   const config = TYPE_CONFIG[type];
 
@@ -65,9 +74,12 @@ export function AIEmailDialog({ open, onOpenChange, lead, type, onComplete }: AI
     setIsGenerating(true);
     try {
       let email = '';
-      if (type === 'proposal') email = await generateProposalEmail(openRouterApiKey, lead, prompt);
-      else if (type === 'welcome') email = await generateWelcomeEmail(openRouterApiKey, lead, prompt);
-      else if (type === 'followup') email = await generateFollowUpEmail(openRouterApiKey, lead, prompt);
+      const senderName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Sales Representative';
+      const profileInfo = orgProfile || {};
+
+      if (type === 'proposal') email = await generateProposalEmail(openRouterApiKey, lead, prompt, senderName, profileInfo);
+      else if (type === 'welcome') email = await generateWelcomeEmail(openRouterApiKey, lead, prompt, senderName, profileInfo);
+      else if (type === 'followup') email = await generateFollowUpEmail(openRouterApiKey, lead, prompt, senderName, profileInfo);
       
       setGeneratedEmail(email);
     } catch (err: any) {

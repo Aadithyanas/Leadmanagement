@@ -75,8 +75,10 @@ export type Database = {
           website_url: string | null
           assigned_to: string | null
           source_category: string | null
+          playlist_id: string | null
           custom_fields: Json | null
           deleted_at: string | null
+          deleted_by: string | null
         }
         Insert: {
           company?: string | null
@@ -96,8 +98,10 @@ export type Database = {
           website_url?: string | null
           assigned_to?: string | null
           source_category?: string | null
+          playlist_id?: string | null
           custom_fields?: Json | null
           deleted_at?: string | null
+          deleted_by?: string | null
         }
         Update: {
           company?: string | null
@@ -117,8 +121,10 @@ export type Database = {
           website_url?: string | null
           assigned_to?: string | null
           source_category?: string | null
+          playlist_id?: string | null
           custom_fields?: Json | null
           deleted_at?: string | null
+          deleted_by?: string | null
         }
         Relationships: [
           {
@@ -253,6 +259,38 @@ export type Database = {
           }
         ]
       }
+      playlists: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          org_id: string
+          created_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          org_id: string
+          created_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          org_id?: string
+          created_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playlists_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       settings: {
         Row: {
           apify_api_key: string | null
@@ -262,6 +300,10 @@ export type Database = {
           notification_email: string | null
           org_id: string
           updated_at: string | null
+          company_name: string | null
+          company_email: string | null
+          company_phone: string | null
+          company_website: string | null
         }
         Insert: {
           apify_api_key?: string | null
@@ -271,6 +313,10 @@ export type Database = {
           notification_email?: string | null
           org_id: string
           updated_at?: string | null
+          company_name?: string | null
+          company_email?: string | null
+          company_phone?: string | null
+          company_website?: string | null
         }
         Update: {
           apify_api_key?: string | null
@@ -280,6 +326,10 @@ export type Database = {
           notification_email?: string | null
           org_id?: string
           updated_at?: string | null
+          company_name?: string | null
+          company_email?: string | null
+          company_phone?: string | null
+          company_website?: string | null
         }
         Relationships: [
           {
@@ -315,6 +365,7 @@ export type Database = {
         | "Won"
         | "Lost"
         | "Rejected"
+        | "Visited"
       org_role: "owner" | "admin" | "leader" | "member"
     }
     CompositeTypes: {
@@ -451,6 +502,7 @@ export const Constants = {
         "Won",
         "Lost",
         "Rejected",
+        "Visited",
       ],
       org_role: ["owner", "admin", "leader", "member"],
     },

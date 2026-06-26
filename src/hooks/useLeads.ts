@@ -17,7 +17,10 @@ import {
   updateOrgMemberTeam,
   updateOrgMemberRole,
   removeOrgMember,
-  updateDiscussion
+  updateDiscussion,
+  fetchPlaylists,
+  createPlaylist,
+  deletePlaylist
 } from '@/services/api';
 import type {
   CreateLeadInput,
@@ -55,6 +58,41 @@ export function useCreateTeam() {
     mutationFn: createTeam,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['teams'] });
+    },
+  });
+}
+
+export function useCreateLead() {
+  const qc = useQueryClient();
+  const activeOrg = useAuthStore((s) => s.activeOrg);
+  return useMutation({
+    mutationFn: createLead,
+    onMutate: async (newLead) => {
+      const qk = ['leads', activeOrg?.id];
+      await qc.cancelQueries({ queryKey: qk });
+      const previousLeads = qc.getQueryData(qk);
+      
+      qc.setQueryData(qk, (old: any) => {
+        if (!old) return old;
+        const optimisticLead = {
+          ...newLead,
+          id: `temp-${Date.now()}`,
+          orgId: activeOrg?.id,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        return [...old, optimisticLead];
+      });
+      
+      return { previousLeads, qk };
+    },
+    onError: (_err, _newLead, context) => {
+      if (context?.previousLeads) {
+        qc.setQueryData(context.qk, context.previousLeads);
+      }
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['leads'] });
     },
   });
 }
@@ -108,11 +146,44 @@ export function useFilteredLeads() {
   
   if (!leads) return { data: leads, ...rest };
 
-  // Filter by sourceCategory first if not 'All'
+  // Filter by sourceCategory or playlist first if not 'All'
   let filteredData = leads;
   if (sourceCategoryFilter !== 'All') {
-    filteredData = leads.filter(l => l.sourceCategory === sourceCategoryFilter);
+    if (sourceCategoryFilter.startsWith('playlist:')) {
+      const plId = sourceCategoryFilter.replace('playlist:', '');
+      filteredData = leads.filter(l => l.playlistId === plId);
+    } else {
+      filteredData = leads.filter(l => l.sourceCategory === sourceCategoryFilter);
+    }
   }
+  
+  if (activeOrg?.role === 'owner' || activeOrg?.role === 'admin' || activeOrg?.role === 'hr') {
+    return { data: filteredData, ...rest };
+  }
+  
+  const currentUserMember = members?.find(m => m.id === user?.id);
+  
+  if (activeOrg?.role === 'leader') {
+    if (!currentUserMember?.teamId) {
+      return { data: filteredData.filter(l => l.assignedTo === user?.id || l.assignedTo === null), ...rest };
+    }
+    const teamMemberIds = members?.filter(m => m.teamId === currentUserMember.teamId).map(m => m.id) || [];
+    return { data: filteredData.filter(l => l.assignedTo === null || teamMemberIds.includes(l.assignedTo)), ...rest };
+  }
+  
+  // Member
+  return { data: filteredData.filter(l => l.assignedTo === user?.id), ...rest };
+}
+
+export function usePlaylistLeads(playlistId: string) {
+  const { data: leads, ...rest } = useLeads();
+  const { data: members } = useOrgMembers();
+  const { user, activeOrg } = useAuthStore();
+  
+  if (!leads) return { data: leads, ...rest };
+
+  // Only get leads for this playlist
+  const filteredData = leads.filter(l => l.playlistId === playlistId);
   
   if (activeOrg?.role === 'owner' || activeOrg?.role === 'admin' || activeOrg?.role === 'hr') {
     return { data: filteredData, ...rest };
@@ -168,16 +239,6 @@ export function useDeletedLeads() {
     queryFn: fetchDeletedLeads,
     enabled: !!activeOrg?.id && (activeOrg.role === 'owner' || activeOrg.role === 'admin'),
     staleTime: 30_000,
-  });
-}
-
-export function useCreateLead() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: CreateLeadInput) => createLead(input),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['leads'] });
-    },
   });
 }
 
@@ -328,6 +389,38 @@ export function useUpdateDiscussion() {
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['discussions', vars.leadId] });
       qc.invalidateQueries({ queryKey: ['leads'] });
+    },
+  });
+}
+
+// ---------- Playlists ----------
+
+export function usePlaylists() {
+  const activeOrg = useAuthStore((s) => s.activeOrg);
+  return useQuery({
+    queryKey: ['playlists', activeOrg?.id],
+    queryFn: fetchPlaylists,
+    enabled: !!activeOrg?.id,
+    staleTime: 60_000,
+  });
+}
+
+export function useCreatePlaylist() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createPlaylist,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['playlists'] });
+    },
+  });
+}
+
+export function useDeletePlaylist() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deletePlaylist,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['playlists'] });
     },
   });
 }
