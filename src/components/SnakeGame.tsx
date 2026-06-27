@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Button } from '@/components/ui/button';
-import { Trophy, Play, RotateCcw, Gamepad2 } from 'lucide-react';
+import { Trophy, Play, RotateCcw, Gamepad2, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/useToast';
 
@@ -154,6 +154,24 @@ export function SnakeGame() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  const handleMobileControl = (dir: Direction) => {
+    if (!isPlayingRef.current) return;
+    switch (dir) {
+      case 'UP':
+        if (directionRef.current !== 'DOWN') setDirection('UP');
+        break;
+      case 'DOWN':
+        if (directionRef.current !== 'UP') setDirection('DOWN');
+        break;
+      case 'LEFT':
+        if (directionRef.current !== 'RIGHT') setDirection('LEFT');
+        break;
+      case 'RIGHT':
+        if (directionRef.current !== 'LEFT') setDirection('RIGHT');
+        break;
+    }
+  };
 
   // Game Loop
   useEffect(() => {
@@ -311,9 +329,35 @@ export function SnakeGame() {
                     )}
                 </div>
                 
-                {/* Mobile Controls Hint */}
-                <div className="mt-6 text-sm text-muted-foreground flex items-center justify-center gap-4 flex-wrap">
-                     <span>Keyboard required:</span>
+                {/* Mobile Controls */}
+                <div className="mt-8 flex flex-col items-center gap-2 sm:hidden pb-4">
+                    <Button variant="secondary" size="icon" className="h-16 w-16 rounded-2xl shadow-md border active:scale-95 transition-transform" 
+                      onTouchStart={(e) => { e.preventDefault(); handleMobileControl('UP'); }} 
+                      onMouseDown={() => handleMobileControl('UP')}>
+                        <ArrowUp className="h-8 w-8" />
+                    </Button>
+                    <div className="flex gap-2">
+                        <Button variant="secondary" size="icon" className="h-16 w-16 rounded-2xl shadow-md border active:scale-95 transition-transform" 
+                          onTouchStart={(e) => { e.preventDefault(); handleMobileControl('LEFT'); }} 
+                          onMouseDown={() => handleMobileControl('LEFT')}>
+                            <ArrowLeft className="h-8 w-8" />
+                        </Button>
+                        <Button variant="secondary" size="icon" className="h-16 w-16 rounded-2xl shadow-md border active:scale-95 transition-transform" 
+                          onTouchStart={(e) => { e.preventDefault(); handleMobileControl('DOWN'); }} 
+                          onMouseDown={() => handleMobileControl('DOWN')}>
+                            <ArrowDown className="h-8 w-8" />
+                        </Button>
+                        <Button variant="secondary" size="icon" className="h-16 w-16 rounded-2xl shadow-md border active:scale-95 transition-transform" 
+                          onTouchStart={(e) => { e.preventDefault(); handleMobileControl('RIGHT'); }} 
+                          onMouseDown={() => handleMobileControl('RIGHT')}>
+                            <ArrowRight className="h-8 w-8" />
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Keyboard Controls Hint */}
+                <div className="mt-6 hidden sm:flex text-sm text-muted-foreground items-center justify-center gap-4 flex-wrap">
+                     <span>Keyboard Controls:</span>
                      <div className="flex gap-2">
                          <kbd className="px-2 py-1 bg-muted rounded border shadow-sm">↑</kbd>
                          <kbd className="px-2 py-1 bg-muted rounded border shadow-sm">↓</kbd>

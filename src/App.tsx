@@ -111,6 +111,14 @@ export default function App() {
       const stored = localStorage.getItem('leadflow_invite_token');
       if (stored) setInviteToken(stored);
     }
+
+    if (window.location.pathname === '/help') {
+      localStorage.setItem('leadflow_snake_unlocked', 'true');
+      window.history.replaceState({}, '', '/');
+    } else if (window.location.pathname === '/unhelp') {
+      localStorage.removeItem('leadflow_snake_unlocked');
+      window.history.replaceState({}, '', '/');
+    }
     
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {

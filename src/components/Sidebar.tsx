@@ -25,7 +25,7 @@ export function Sidebar({ onLogout, isOpen, onClose }: SidebarProps) {
     if (onClose) onClose();
   };
 
-  const navItems = [
+  const navItems: any[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'leads', label: 'Leads', icon: Users },
     { id: 'followups', label: 'Follow-Ups', icon: Calendar },
@@ -34,7 +34,11 @@ export function Sidebar({ onLogout, isOpen, onClose }: SidebarProps) {
     { id: 'discover', label: 'Discover Leads', icon: Compass },
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'settings', label: 'Settings', icon: Settings },
-  ] as const;
+  ];
+
+  if (localStorage.getItem('leadflow_snake_unlocked') === 'true') {
+    navItems.push({ id: 'snake_game', label: 'Snake Game', icon: Gamepad2 });
+  }
 
   const isElevated = activeOrg?.role === 'owner' || activeOrg?.role === 'admin' || isSuperAdmin;
   const adminNavItems = [...navItems];
