@@ -587,6 +587,28 @@ export async function deletePlaylist(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+export async function updatePlaylistAssignee(playlistId: string, assignedTo: string | null): Promise<void> {
+  const orgId = getOrgId();
+  const { error } = await supabase
+    .from('leads')
+    .update({ assigned_to: assignedTo })
+    .eq('org_id', orgId)
+    .eq('playlist_id', playlistId);
+
+  if (error) throw new Error(error.message);
+}
+
+export async function updateSourceCategoryAssignee(sourceCategory: string, assignedTo: string | null): Promise<void> {
+  const orgId = getOrgId();
+  const { error } = await supabase
+    .from('leads')
+    .update({ assigned_to: assignedTo })
+    .eq('org_id', orgId)
+    .eq('source_category', sourceCategory);
+
+  if (error) throw new Error(error.message);
+}
+
 export async function createLeadsBulk(leads: CreateLeadInput[]): Promise<{ message: string; count: number }> {
   const orgId = getOrgId();
   const payload = leads.map(l => ({

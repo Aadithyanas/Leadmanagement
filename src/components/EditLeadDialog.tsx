@@ -149,14 +149,6 @@ export function EditLeadDialog() {
         }
       });
 
-      if (changes.length > 0) {
-        await createDiscussion.mutateAsync({
-          leadId: editingLeadId,
-          note: `[System] Lead updated: ${changes.join(', ')}`,
-          followUpAt: null,
-        });
-      }
-
       toast({ title: 'Lead updated', description: `${form.name} has been updated.`, variant: 'success' });
       closeEditLead();
     } catch {

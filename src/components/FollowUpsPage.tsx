@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { useFilteredLeads } from '@/hooks/useLeads';
+import { useLeads, useOrgMembers, usePlaylists } from '@/hooks/useLeads';
 import { useLeadStore } from '@/store/useLeadStore';
 import { LeadCard } from '@/components/LeadCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Inbox, Loader2 } from 'lucide-react';
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval,
@@ -14,7 +15,12 @@ import { cn } from '@/lib/utils';
 export function FollowUpsPage() {
   const { selectedFollowUpDate, setSelectedFollowUpDate } = useLeadStore();
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(selectedFollowUpDate || new Date()));
-  const { data: leads, isLoading } = useFilteredLeads();
+  const { data: leads, isLoading } = useLeads();
+  const { data: members } = useOrgMembers();
+  const { data: playlists } = usePlaylists();
+  
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('All');
+  const [sourceCategoryFilter, setSourceCategoryFilter] = useState<string>('All');
 
   const handlePrevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
@@ -24,8 +30,27 @@ export function FollowUpsPage() {
   const endDate = endOfWeek(endOfMonth(currentMonth));
   const days = eachDayOfInterval({ start: startDate, end: endDate });
 
+  let filteredLeads = leads || [];
+
+  if (assigneeFilter !== 'All') {
+    if (assigneeFilter === 'Unassigned') {
+      filteredLeads = filteredLeads.filter(l => !l.assignedTo);
+    } else {
+      filteredLeads = filteredLeads.filter(l => l.assignedTo === assigneeFilter);
+    }
+  }
+
+  if (sourceCategoryFilter !== 'All') {
+    if (sourceCategoryFilter.startsWith('playlist:')) {
+      const pId = sourceCategoryFilter.replace('playlist:', '');
+      filteredLeads = filteredLeads.filter(l => l.playlistId === pId);
+    } else {
+      filteredLeads = filteredLeads.filter(l => l.sourceCategory === sourceCategoryFilter);
+    }
+  }
+
   const followUpMap = new Map<string, number>();
-  leads?.forEach(lead => {
+  filteredLeads.forEach(lead => {
     if (lead.followUpAt) {
       try {
         const dateStr = format(parseISO(lead.followUpAt), 'yyyy-MM-dd');
@@ -37,7 +62,9 @@ export function FollowUpsPage() {
   });
 
   const selectedDateStr = selectedFollowUpDate ? format(selectedFollowUpDate, 'yyyy-MM-dd') : '';
-  const selectedLeads = leads?.filter(l => l.followUpAt && format(parseISO(l.followUpAt), 'yyyy-MM-dd') === selectedDateStr) || [];
+  const selectedLeads = filteredLeads.filter(l => l.followUpAt && format(parseISO(l.followUpAt), 'yyyy-MM-dd') === selectedDateStr);
+
+  const uniqueCategories = Array.from(new Set((leads || []).map(l => l.sourceCategory).filter(Boolean)));
 
   return (
     <div className="space-y-6">
@@ -116,12 +143,54 @@ export function FollowUpsPage() {
         </Card>
 
         <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            Scheduled for {selectedFollowUpDate ? format(selectedFollowUpDate, 'MMMM d, yyyy') : '...'}
-            <span className="bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full text-xs">
-              {selectedLeads.length}
-            </span>
-          </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              Scheduled for {selectedFollowUpDate ? format(selectedFollowUpDate, 'MMMM d, yyyy') : '...'}
+              <span className="bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full text-xs">
+                {selectedLeads.length}
+              </span>
+            </h2>
+
+            <div className="flex flex-col sm:flex-row items-center gap-2">
+              <Select value={sourceCategoryFilter} onValueChange={setSourceCategoryFilter}>
+                <SelectTrigger className="w-full sm:w-[180px] h-9">
+                  <SelectValue placeholder="Sheet / Playlist" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Sheets & Playlists</SelectItem>
+                  {playlists && playlists.length > 0 && (
+                    <>
+                      <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/20 my-1 rounded-sm select-none">Playlists</div>
+                      {playlists.map(p => (
+                        <SelectItem key={p.id} value={`playlist:${p.id}`}>{p.name}</SelectItem>
+                      ))}
+                    </>
+                  )}
+                  {uniqueCategories.length > 0 && (
+                    <>
+                      <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/20 my-1 rounded-sm select-none">Imported Sheets</div>
+                      {uniqueCategories.map((cat: any) => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+
+              <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+                <SelectTrigger className="w-full sm:w-[160px] h-9">
+                  <SelectValue placeholder="Filter by member" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Members</SelectItem>
+                  <SelectItem value="Unassigned">Unassigned</SelectItem>
+                  {members?.map(m => (
+                    <SelectItem key={m.id} value={m.id}>{m.name || m.email}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           
           {isLoading ? (
             <div className="flex items-center justify-center py-20">

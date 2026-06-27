@@ -20,7 +20,9 @@ import {
   updateDiscussion,
   fetchPlaylists,
   createPlaylist,
-  deletePlaylist
+  deletePlaylist,
+  updatePlaylistAssignee,
+  updateSourceCategoryAssignee
 } from '@/services/api';
 import type {
   CreateLeadInput,
@@ -421,6 +423,28 @@ export function useDeletePlaylist() {
     mutationFn: deletePlaylist,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['playlists'] });
+    },
+  });
+}
+
+export function useUpdatePlaylistAssignee() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ playlistId, assignedTo }: { playlistId: string; assignedTo: string | null }) =>
+      updatePlaylistAssignee(playlistId, assignedTo),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['leads'] });
+    },
+  });
+}
+
+export function useUpdateSourceCategoryAssignee() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ sourceCategory, assignedTo }: { sourceCategory: string; assignedTo: string | null }) =>
+      updateSourceCategoryAssignee(sourceCategory, assignedTo),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['leads'] });
     },
   });
 }

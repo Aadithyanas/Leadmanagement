@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { usePlaylists, useCreatePlaylist, useDeletePlaylist, useLeads } from '@/hooks/useLeads';
+import { usePlaylists, useCreatePlaylist, useDeletePlaylist, useLeads, useAssignableMembers, useUpdatePlaylistAssignee } from '@/hooks/useLeads';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { toast } from '@/hooks/useToast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Plus, ListMusic, Trash2, Calendar } from 'lucide-react';
 import { PlaylistSpreadsheet } from '@/components/PlaylistSpreadsheet';
 import { formatDate } from '@/lib/date-utils';
@@ -16,6 +17,8 @@ export function PlaylistsPage() {
   const createPlaylist = useCreatePlaylist();
   const deletePlaylist = useDeletePlaylist();
   const { user, activeOrg } = useAuthStore();
+  const assignableMembers = useAssignableMembers();
+  const updatePlaylistAssignee = useUpdatePlaylistAssignee();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
@@ -57,6 +60,18 @@ export function PlaylistsPage() {
       }
     } catch {
       toast({ title: 'Error deleting playlist', variant: 'destructive' });
+    }
+  };
+
+  const handleAssignPlaylist = async (playlistId: string, memberId: string) => {
+    try {
+      await updatePlaylistAssignee.mutateAsync({ 
+        playlistId, 
+        assignedTo: memberId === 'unassigned' ? null : memberId 
+      });
+      toast({ title: 'Playlist assigned', variant: 'success' });
+    } catch {
+      toast({ title: 'Error assigning playlist', variant: 'destructive' });
     }
   };
 
@@ -113,6 +128,22 @@ export function PlaylistsPage() {
                 </div>
                 
                 <h3 className="font-semibold text-lg line-clamp-1 mb-1">{playlist.name}</h3>
+                
+                {isPrivileged && (
+                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                    <Select onValueChange={(v) => handleAssignPlaylist(playlist.id, v)}>
+                      <SelectTrigger className="h-8 text-xs w-full bg-secondary/50">
+                        <SelectValue placeholder="Assign Playlist" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {assignableMembers?.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>{m.name || m.email}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 
                 <div className="mt-auto pt-4 flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
                   <Calendar className="h-3.5 w-3.5" />

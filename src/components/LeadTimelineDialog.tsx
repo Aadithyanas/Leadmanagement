@@ -114,11 +114,13 @@ Requirements: ${leadData.requirements || ''}
   const commitStatusChange = async (status: string, additionalNote?: string, followUpAt?: string | null) => {
     try {
       await updateStatus.mutateAsync({ id: selectedLeadId!, status: status as LeadStatus });
-      await createDiscussion.mutateAsync({
-        leadId: selectedLeadId!,
-        note: additionalNote || `[System] Status changed from ${lead!.status} to ${status}`,
-        followUpAt: followUpAt || null,
-      });
+      if (additionalNote) {
+        await createDiscussion.mutateAsync({
+          leadId: selectedLeadId!,
+          note: additionalNote,
+          followUpAt: followUpAt || null,
+        });
+      }
       toast({ title: 'Status updated', description: `Changed to ${status}`, variant: 'success' });
     } catch {
       toast({ title: 'Error', description: 'Failed to update status.', variant: 'destructive' });
@@ -129,7 +131,7 @@ Requirements: ${leadData.requirements || ''}
     if (pendingStatus) {
       await commitStatusChange(
         pendingStatus, 
-        `[System] Status changed from ${lead!.status} to ${pendingStatus}.\n\nNote/Draft (${type}):\n${generatedEmail}`,
+        `Note/Draft (${type}):\n${generatedEmail}`,
         followUpAt
       );
       setPendingStatus(null);
@@ -171,14 +173,6 @@ Requirements: ${leadData.requirements || ''}
     if (!selectedLeadId) return;
     try {
       await updateLead.mutateAsync({ id: selectedLeadId, updates: { assignedTo: userId === 'unassigned' ? null : userId } });
-      
-      const assignedUserName = userId === 'unassigned' ? 'Unassigned' : (assignableMembers?.find(m => m.id === userId)?.name || 'a member');
-      await createDiscussion.mutateAsync({
-        leadId: selectedLeadId,
-        note: `[System] Lead assigned to ${assignedUserName}`,
-        followUpAt: null,
-      });
-      
       toast({ title: 'Assignment updated', variant: 'success' });
     } catch {
       toast({ title: 'Error', description: 'Failed to assign lead.', variant: 'destructive' });
@@ -279,7 +273,7 @@ Requirements: ${leadData.requirements || ''}
         {lead ? (
           <>
             <DialogHeader>
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start justify-between gap-4 pr-6">
                 <div>
                   <DialogTitle className="text-xl">{lead.name}</DialogTitle>
                   <DialogDescription className="mt-1 space-y-1">

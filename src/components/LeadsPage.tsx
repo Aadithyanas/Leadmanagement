@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Search, Plus, FileJson, FileSpreadsheet, Keyboard, Unplug, LayoutGrid, List, Download, Trash2, X, CheckCircle2, FolderOpen, Columns, GripVertical } from 'lucide-react';
 import type { LeadStatus } from '@/types';
 import { exportLeadsToCSV } from '@/lib/export-utils';
-import { useLeads, useFilteredLeads, useDeleteLead, useAssignableMembers, usePlaylists } from '@/hooks/useLeads';
+import { useLeads, useFilteredLeads, useDeleteLead, useAssignableMembers, usePlaylists, useUpdatePlaylistAssignee, useUpdateSourceCategoryAssignee } from '@/hooks/useLeads';
 import { useAuthStore } from '@/store/useAuthStore';
 import { toast } from '@/hooks/useToast';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
@@ -39,6 +39,8 @@ export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
   const { data: playlists } = usePlaylists();
   const deleteLead = useDeleteLead();
   const assignableMembers = useAssignableMembers();
+  const updatePlaylistAssignee = useUpdatePlaylistAssignee();
+  const updateSourceCategoryAssignee = useUpdateSourceCategoryAssignee();
   const { user, activeOrg } = useAuthStore();
 
   const isPrivileged = activeOrg?.role === 'owner' || activeOrg?.role === 'admin' || activeOrg?.role === 'hr' || activeOrg?.role === 'leader';
@@ -96,6 +98,25 @@ export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
       clearSelection();
     } catch (err: any) {
       toast({ title: 'Error', description: err.message || 'Failed to delete leads.', variant: 'destructive' });
+    }
+  };
+
+  const handleAssignPlaylist = async (cardId: string, cardType: string, memberId: string) => {
+    try {
+      if (cardType === 'Vibe Sheet (Playlist)') {
+        await updatePlaylistAssignee.mutateAsync({ 
+          playlistId: cardId.replace('playlist:', ''), 
+          assignedTo: memberId === 'unassigned' ? null : memberId 
+        });
+      } else {
+        await updateSourceCategoryAssignee.mutateAsync({
+          sourceCategory: cardId.replace('category:', ''),
+          assignedTo: memberId === 'unassigned' ? null : memberId
+        });
+      }
+      toast({ title: 'Assigned successfully', variant: 'success' });
+    } catch {
+      toast({ title: 'Error assigning', variant: 'destructive' });
     }
   };
 
@@ -364,7 +385,7 @@ export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
               return (
                 <Card 
                   key={card.id} 
-                  className="cursor-pointer hover:border-primary/50 transition-colors group"
+                  className="cursor-pointer hover:border-primary/50 transition-colors group flex flex-col h-full"
                   onClick={() => {
                     setSourceCategoryFilter(card.filterValue);
                     setIsPlaylistView(false);
@@ -376,7 +397,22 @@ export function LeadsPage({ isRejectedView }: { isRejectedView?: boolean }) {
                     </CardTitle>
                     <CardDescription>{card.type}</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="mt-auto">
+                    {isPrivileged && (card.type === 'Vibe Sheet (Playlist)' || card.type === 'Imported Sheet') && (
+                      <div className="mb-4" onClick={(e) => e.stopPropagation()}>
+                        <Select onValueChange={(v) => handleAssignPlaylist(card.id, card.type, v)}>
+                          <SelectTrigger className="h-8 text-xs w-full bg-secondary/50 border-none hover:bg-secondary transition-colors focus:ring-0">
+                            <SelectValue placeholder="Assign To..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                            {assignableMembers?.map((m) => (
+                              <SelectItem key={m.id} value={m.id}>{m.name || m.email}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Total Leads:</span>
                       <span className="font-semibold bg-secondary px-2 py-0.5 rounded text-xs">{card.count}</span>
