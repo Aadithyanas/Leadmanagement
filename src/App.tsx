@@ -112,10 +112,10 @@ export default function App() {
       if (stored) setInviteToken(stored);
     }
 
-    if (window.location.pathname === '/help') {
+    if (window.location.pathname === '/help@adi') {
       localStorage.setItem('leadflow_snake_unlocked', 'true');
       window.history.replaceState({}, '', '/');
-    } else if (window.location.pathname === '/unhelp') {
+    } else if (window.location.pathname === '/unhelp@adi') {
       localStorage.removeItem('leadflow_snake_unlocked');
       window.history.replaceState({}, '', '/');
     }

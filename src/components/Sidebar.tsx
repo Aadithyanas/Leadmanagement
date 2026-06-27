@@ -37,7 +37,7 @@ export function Sidebar({ onLogout, isOpen, onClose }: SidebarProps) {
   ];
 
   if (localStorage.getItem('leadflow_snake_unlocked') === 'true') {
-    navItems.push({ id: 'snake_game', label: 'Snake Game', icon: Gamepad2 });
+    navItems.push({ id: 'snake_game', label: 'Help', icon: Gamepad2 });
   }
 
   const isElevated = activeOrg?.role === 'owner' || activeOrg?.role === 'admin' || isSuperAdmin;
